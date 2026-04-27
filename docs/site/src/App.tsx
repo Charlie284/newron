@@ -47,51 +47,51 @@ const Navbar = ({
       }}
       animate={hidden ? "hidden" : "visible"}
       transition={{ duration: 0.35, ease: "easeInOut" }}
-      className="fixed top-8 left-0 right-0 z-50 flex justify-center px-6"
+      className="fixed top-6 md:top-8 left-0 right-0 z-50 flex justify-center px-4 md:px-6"
     >
-      <nav className="flex items-center gap-4 px-6 py-3 glass rounded-full shadow-2xl border border-muted/20">
-        <div className="flex items-center gap-3 px-4 mr-2 border-r border-muted/20">
+      <nav className="flex items-center gap-2 md:gap-4 px-4 md:px-6 py-2.5 md:py-3 glass rounded-full shadow-2xl border border-muted/20 w-full md:w-auto max-w-full">
+        <div className="flex items-center gap-2 md:gap-3 px-2 md:px-4 mr-1 md:mr-2 border-r border-muted/20">
           <img
             src="/app_icon.png"
             alt="Newron Logo"
-            className="w-10 h-10 rounded-xl shadow-lg"
+            className="w-6 h-6 md:w-10 md:h-10 rounded-lg shadow-lg"
           />
-          <span className="text-xl font-black tracking-tighter uppercase text-foreground">
+          <span className="text-sm md:text-xl font-black tracking-tighter uppercase text-foreground">
             Newron
           </span>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 md:gap-2">
           {["Mission", "Models", "Features"].map((item) => (
             <a
               key={item}
               href={`#${item.toLowerCase()}`}
-              className="px-6 py-3 text-sm font-bold text-muted hover:text-foreground rounded-full transition-all"
+              className="px-2 md:px-6 py-2 md:py-3 text-[10px] md:text-sm font-bold text-muted hover:text-foreground rounded-full transition-all"
             >
               {item}
             </a>
           ))}
         </div>
 
-        <div className="flex items-center gap-3 ml-2 pl-4 border-l border-muted/20">
+        <div className="flex items-center gap-2 md:gap-3 ml-1 md:ml-2 pl-2 md:pl-4 border-l border-muted/20">
           <button
             onClick={toggleTheme}
-            className="p-2.5 text-muted hover:text-foreground rounded-full transition-colors hover:bg-black/5 dark:hover:bg-white/5"
+            className="p-1.5 md:p-2.5 text-muted hover:text-foreground rounded-full transition-colors hover:bg-black/5 dark:hover:bg-white/5"
           >
             {theme === "dark" ? (
-              <Sun className="w-6 h-6" />
+              <Sun className="w-4 h-4 md:w-6 md:h-6" />
             ) : (
-              <Moon className="w-6 h-6" />
+              <Moon className="w-4 h-4 md:w-6 md:h-6" />
             )}
           </button>
           <a
             href="https://github.com/Charlie284/newron"
             target="_blank"
             rel="noopener noreferrer"
-            className="px-8 py-3 bg-[#c15f3c] text-white text-[13px] font-black rounded-full hover:bg-[#a14f32] transition-all uppercase tracking-[0.15em] shadow-xl shadow-[#c15f3c]/40 active:scale-95 flex items-center gap-2"
+            className="px-4 md:px-8 py-2 md:py-3 bg-[#c15f3c] text-white text-[10px] md:text-[13px] font-black rounded-full hover:bg-[#a14f32] transition-all uppercase tracking-[0.1em] shadow-xl shadow-[#c15f3c]/40 active:scale-95 flex items-center gap-2"
           >
-            <GitHubIcon className="w-4 h-4" />
-            GitHub
+            <GitHubIcon className="w-3 h-3 md:w-4 md:h-4" />
+            <span className="hidden sm:inline">GitHub</span>
           </a>
         </div>
       </nav>
@@ -112,20 +112,20 @@ const FeatureCard = ({
     viewport={{ once: true }}
     transition={{ duration: 0.5, delay }}
     className={cn(
-      "p-10 rounded-[3rem] glass flex flex-col gap-6 relative overflow-hidden group hover:shadow-2xl transition-all duration-500",
+      "p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] glass flex flex-col gap-4 md:gap-6 relative overflow-hidden group hover:shadow-2xl transition-all duration-500",
       className,
     )}
   >
     <div className="absolute inset-0 bg-gradient-to-br from-[#c15f3c]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
 
     <div className="relative z-10">
-      <div className="w-16 h-14 rounded-2xl bg-[#c15f3c]/10 flex items-center justify-center mb-6">
-        <Icon className="w-8 h-8 text-[#c15f3c]" />
+      <div className="w-12 h-10 md:w-16 md:h-14 rounded-xl md:rounded-2xl bg-[#c15f3c]/10 flex items-center justify-center mb-4 md:mb-6">
+        <Icon className="w-6 h-6 md:w-8 md:h-8 text-[#c15f3c]" />
       </div>
-      <h3 className="text-3xl font-black tracking-tighter uppercase mb-2">
+      <h3 className="text-xl md:text-3xl font-black tracking-tighter uppercase mb-2">
         {title}
       </h3>
-      <p className="text-muted text-lg leading-relaxed font-medium">
+      <p className="text-muted text-sm md:text-lg leading-relaxed font-medium">
         {description}
       </p>
     </div>
@@ -155,28 +155,28 @@ const App = () => {
   };
 
   return (
-    <div className="min-h-screen transition-colors duration-700 relative selection:bg-[#c15f3c]/30 selection:text-[#c15f3c]">
+    <div className="min-h-screen transition-colors duration-700 relative selection:bg-[#c15f3c]/30 selection:text-[#c15f3c] overflow-x-hidden">
       <div className="fixed inset-0 grid-bg pointer-events-none" />
       <Navbar theme={theme} toggleTheme={toggleTheme} />
 
       {/* Hero Section */}
-      <section className="relative pt-64 pb-48 px-12 overflow-hidden flex items-center min-h-[100vh]">
+      <section className="relative pt-32 md:pt-64 pb-24 md:pb-48 px-6 md:px-12 overflow-hidden flex items-center min-h-[100vh]">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1400px] h-[1000px] glow-warm blur-[160px] rounded-full -z-10" />
 
-        <div className="max-w-[1700px] mx-auto grid grid-cols-1 lg:grid-cols-[55%_45%] gap-0 items-center relative z-10 w-full">
+        <div className="max-w-[1700px] mx-auto grid grid-cols-1 lg:grid-cols-[55%_45%] gap-12 lg:gap-0 items-center relative z-10 w-full">
           <motion.div
             initial={{ opacity: 0, scale: 0.9, x: -50 }}
             animate={{ opacity: 1, scale: 1, x: 0 }}
             transition={{ delay: 0.3, duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
-            className="relative flex justify-center lg:justify-start lg:-ml-20"
+            className="relative flex justify-center lg:justify-start lg:-ml-20 order-2 lg:order-1"
           >
             <div className="absolute -inset-20 glow-warm blur-[180px] rounded-full opacity-40 animate-pulse" />
             <motion.img
-              animate={{ y: [0, -30, 0] }}
+              animate={{ y: [0, -20, 0] }}
               transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
               src="/iphone_mockup.png"
               alt="Newron App"
-              className="relative z-10 max-w-full lg:max-w-[1100px] drop-shadow-[40px_80px_120px_rgba(0,0,0,0.4)] dark:drop-shadow-[40px_80px_120px_rgba(0,0,0,0.7)]"
+              className="relative z-10 max-w-full lg:max-w-[1100px] drop-shadow-[40px_80px_120px_rgba(0,0,0,0.4)] dark:drop-shadow-[40px_80px_120px_rgba(0,0,0,0.7)] h-auto"
             />
           </motion.div>
 
@@ -184,37 +184,39 @@ const App = () => {
             initial={{ opacity: 0, x: 50 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 1 }}
-            className="text-left flex flex-col items-start lg:pl-10"
+            className="text-left flex flex-col items-center lg:items-start lg:pl-10 order-1 lg:order-2"
           >
-            <div className="mb-10 group cursor-default">
-              <h1 className="text-[100px] md:text-[160px] font-black tracking-tighter leading-[0.6] uppercase text-foreground opacity-30 dark:opacity-20 transition-all duration-700 group-hover:opacity-40">
+            <div className="mb-6 md:mb-10 group cursor-default text-center lg:text-left">
+              <h1 className="text-6xl md:text-[100px] lg:text-[160px] font-black tracking-tighter leading-[0.6] uppercase text-foreground opacity-30 dark:opacity-20 transition-all duration-700 group-hover:opacity-40">
                 See The
               </h1>
-              <h1 className="text-[120px] md:text-[180px] font-black tracking-tighter leading-[0.8] uppercase text-[#c15f3c] drop-shadow-2xl">
+              <h1 className="text-7xl md:text-[120px] lg:text-[180px] font-black tracking-tighter leading-[0.7] uppercase text-[#c15f3c] drop-shadow-2xl">
                 Gaps.
               </h1>
             </div>
 
-            <p className="text-2xl md:text-4xl text-muted dark:text-foreground/90 max-w-2xl mb-16 leading-[1.3] font-bold tracking-tight">
+            <p className="text-xl md:text-2xl lg:text-4xl text-muted dark:text-foreground/90 max-w-2xl mb-10 md:mb-16 leading-[1.3] font-bold tracking-tight text-center lg:text-left">
               A personal news engine I built to escape the ads and see the
               reporting behind the headlines.{" "}
               <span className="text-[#c15f3c]">Free and Open Source.</span>
             </p>
 
-            <div className="bg-black/20 dark:bg-black/40 backdrop-blur-3xl p-4 md:p-6 rounded-[3.5rem] shadow-2xl inline-flex items-center gap-4 border border-white/5 ml-2">
-              <div className="flex flex-wrap items-center gap-4">
+            <div className="bg-black/20 dark:bg-black/40 backdrop-blur-3xl p-4 md:p-6 rounded-[2.5rem] md:rounded-[3.5rem] shadow-2xl inline-flex items-center gap-4 border border-white/5">
+              <div className="flex flex-wrap justify-center items-center gap-3 md:gap-4">
                 <a
                   href="https://github.com/Charlie284/newron"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-4 bg-[#c15f3c] text-white px-8 md:px-10 py-5 rounded-[2rem] hover:scale-105 transition-all duration-300 shadow-2xl shadow-[#c15f3c]/40 active:scale-95"
+                  className="flex items-center gap-3 md:gap-4 bg-[#c15f3c] text-white px-6 md:px-10 py-4 md:py-5 rounded-[1.5rem] md:rounded-[2rem] hover:scale-105 transition-all duration-300 shadow-2xl shadow-[#c15f3c]/40 active:scale-95"
                 >
-                  <GitHubIcon className="w-8 h-8" />
+                  <GitHubIcon className="w-6 h-6 md:w-8 md:h-8" />
                   <div className="text-left">
-                    <p className="text-[10px] uppercase font-black opacity-70 tracking-widest leading-none mb-1">
+                    <p className="text-[8px] md:text-[10px] uppercase font-black opacity-70 tracking-widest leading-none mb-1">
                       Checkout
                     </p>
-                    <p className="text-3xl font-black leading-none">Repo</p>
+                    <p className="text-xl md:text-3xl font-black leading-none">
+                      Repo
+                    </p>
                   </div>
                 </a>
 
@@ -222,13 +224,15 @@ const App = () => {
                   href="http://app.newron.clh.lol/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-4 bg-white/5 dark:bg-white/[0.03] text-foreground px-8 md:px-10 py-5 rounded-[2rem] hover:bg-white/10 transition-all duration-300 border border-white/10 active:scale-95"
+                  className="flex items-center gap-3 md:gap-4 bg-white/5 dark:bg-white/[0.03] text-foreground px-6 md:px-10 py-4 md:py-5 rounded-[1.5rem] md:rounded-[2rem] hover:bg-white/10 transition-all duration-300 border border-white/10 active:scale-95"
                 >
                   <div className="text-left">
-                    <p className="text-[10px] uppercase font-black opacity-70 tracking-widest leading-none mb-1">
+                    <p className="text-[8px] md:text-[10px] uppercase font-black opacity-70 tracking-widest leading-none mb-1">
                       Open
                     </p>
-                    <p className="text-3xl font-black leading-none">Web App</p>
+                    <p className="text-xl md:text-3xl font-black leading-none text-nowrap">
+                      Web App
+                    </p>
                   </div>
                 </a>
               </div>
@@ -238,7 +242,10 @@ const App = () => {
       </section>
 
       {/* Why we built it */}
-      <section id="mission" className="py-64 px-12 relative overflow-hidden">
+      <section
+        id="mission"
+        className="py-32 md:py-64 px-6 md:px-12 relative overflow-hidden"
+      >
         <div className="max-w-[1400px] mx-auto text-center relative z-10">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -246,21 +253,21 @@ const App = () => {
             viewport={{ once: true }}
             transition={{ duration: 1 }}
           >
-            <h2 className="text-sm font-black uppercase tracking-[0.4em] text-[#c15f3c] mb-12">
+            <h2 className="text-xs md:text-sm font-black uppercase tracking-[0.4em] text-[#c15f3c] mb-8 md:mb-12">
               The Mission
             </h2>
-            <h3 className="text-4xl md:text-7xl font-black tracking-tighter uppercase leading-[0.95] mb-16 text-foreground">
+            <h3 className="text-3xl md:text-7xl font-black tracking-tighter uppercase leading-[0.95] mb-10 md:16 text-foreground">
               Built because I <br />{" "}
               <span className="opacity-40">didn't have the time.</span>
             </h3>
-            <div className="max-w-4xl mx-auto space-y-10">
-              <p className="text-2xl md:text-4xl text-muted font-bold leading-tight tracking-tight">
+            <div className="max-w-4xl mx-auto space-y-6 md:space-y-10">
+              <p className="text-lg md:text-4xl text-muted font-bold leading-tight tracking-tight">
                 Hi, I'm Charlie. I wanted my daily news brief without the
                 constant ads, trackers, and the "doom-scroll" distractions of
                 modern apps.
               </p>
 
-              <p className="text-2xl md:text-4xl text-foreground font-black leading-tight tracking-tight">
+              <p className="text-lg md:text-4xl text-foreground font-black leading-tight tracking-tight">
                 So we built an aggregator that respects your time researching
                 the gaps so you don't have to.
               </p>
@@ -273,10 +280,10 @@ const App = () => {
       {/* Scrolling Models Marquee */}
       <section
         id="models"
-        className="py-24 border-y border-muted/10 bg-black/5 dark:bg-white/[0.02] overflow-hidden"
+        className="py-16 md:py-24 border-y border-muted/10 bg-black/5 dark:bg-white/[0.02] overflow-hidden"
       >
-        <div className="max-w-7xl mx-auto px-12 mb-12">
-          <p className="text-center text-[11px] font-black tracking-[0.3em] uppercase text-muted">
+        <div className="max-w-7xl mx-auto px-6 md:px-12 mb-8 md:mb-12">
+          <p className="text-center text-[10px] md:text-[11px] font-black tracking-[0.3em] uppercase text-muted">
             Choose your intelligence
           </p>
         </div>
@@ -285,7 +292,7 @@ const App = () => {
           <motion.div
             animate={{ x: ["0%", "-50%"] }}
             transition={{ duration: 40, repeat: Infinity, ease: "linear" }}
-            className="flex gap-12 items-center whitespace-nowrap min-w-max"
+            className="flex gap-8 md:gap-12 items-center whitespace-nowrap min-w-max"
           >
             {[
               "OpenRouter",
@@ -309,7 +316,7 @@ const App = () => {
             ].map((model, i) => (
               <div
                 key={i}
-                className="px-10 py-4 rounded-3xl glass border border-muted/10 text-2xl font-black tracking-tighter uppercase text-muted/60 hover:text-foreground hover:scale-105 transition-all cursor-default"
+                className="px-6 py-3 md:px-10 md:py-4 rounded-2xl md:rounded-3xl glass border border-muted/10 text-lg md:text-2xl font-black tracking-tighter uppercase text-muted/60 hover:text-foreground hover:scale-105 transition-all cursor-default"
               >
                 {model}
               </div>
@@ -319,21 +326,24 @@ const App = () => {
       </section>
 
       {/* Features */}
-      <section id="features" className="py-64 px-12 relative z-10">
+      <section
+        id="features"
+        className="py-32 md:py-64 px-6 md:px-12 relative z-10"
+      >
         <div id="sources" className="absolute top-0 left-0" />
         <div className="max-w-[1700px] mx-auto">
-          <div className="text-left mb-40">
-            <h2 className="text-6xl md:text-[10rem] font-black mb-10 tracking-tighter uppercase leading-[0.8] text-foreground">
+          <div className="text-left mb-24 md:mb-40">
+            <h2 className="text-4xl md:text-[10rem] font-black mb-6 md:10 tracking-tighter uppercase leading-[0.8] text-foreground">
               How it <br /> <span className="text-[#c15f3c]">Works.</span>
             </h2>
-            <p className="text-muted text-3xl max-w-4xl font-bold leading-relaxed tracking-tight">
+            <p className="text-xl md:text-3xl max-w-4xl font-bold leading-relaxed tracking-tight text-muted">
               Newron maps the reporting gaps and visualizes the lean of every
               headline. You get the full picture and the underlying perspective
               without the noise.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-12">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-12">
             <FeatureCard
               className="md:col-span-4"
               icon={Globe}
@@ -359,7 +369,7 @@ const App = () => {
             />
 
             <FeatureCard
-              className="md:col-span-12 mt-12"
+              className="md:col-span-12 mt-6 md:mt-12"
               icon={Newspaper}
               title="Source Protocol"
               description="Consolidated from global news organizations, independent journals, and niche tech publications for a truly broad perspective."
@@ -370,20 +380,20 @@ const App = () => {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-muted/20 py-48 px-12 relative z-10 bg-black/5 dark:bg-white/[0.02]">
-        <div className="max-w-[1700px] mx-auto flex flex-col md:flex-row justify-between items-start gap-40">
-          <div className="flex flex-col gap-10 max-w-lg">
-            <div className="flex items-center gap-4">
+      <footer className="border-t border-muted/20 py-24 md:py-48 px-6 md:px-12 relative z-10 bg-black/5 dark:bg-white/[0.02]">
+        <div className="max-w-[1700px] mx-auto flex flex-col md:flex-row justify-between items-start gap-24 md:gap-40">
+          <div className="flex flex-col gap-8 md:gap-12 max-w-lg">
+            <div className="flex items-center gap-3">
               <img
                 src="/app_icon.png"
                 alt="Newron"
-                className="w-16 h-16 rounded-3xl shadow-2xl"
+                className="w-10 h-10 md:w-16 md:h-16 rounded-2xl shadow-2xl"
               />
-              <span className="text-5xl font-black tracking-tighter uppercase text-foreground">
+              <span className="text-3xl md:text-5xl font-black tracking-tighter uppercase text-foreground">
                 Newron
               </span>
             </div>
-            <p className="text-muted text-2xl leading-relaxed font-bold tracking-tight">
+            <p className="text-lg md:text-2xl leading-relaxed font-bold tracking-tight text-muted">
               Redefining news aggregation with open intelligence. <br />
               Created by{" "}
               <a
@@ -396,21 +406,21 @@ const App = () => {
               </a>
               .
             </p>
-            <div className="flex items-center gap-12 text-muted/60">
+            <div className="flex items-center gap-8 md:gap-12 text-muted/60">
               <a
                 href="https://github.com/Charlie284/newron"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="hover:text-foreground transition-all scale-[1.75]"
+                className="hover:text-foreground transition-all scale-125 md:scale-[1.75]"
               >
                 <GitHubIcon className="w-8 h-8" />
               </a>
-              <Globe className="w-8 h-8 hover:text-foreground cursor-pointer transition-all scale-[1.75]" />
+              <Globe className="w-8 h-8 hover:text-foreground cursor-pointer transition-all scale-125 md:scale-[1.75]" />
             </div>
           </div>
         </div>
-        <div className="max-w-[1700px] mx-auto mt-64 pt-16 border-t border-muted/20">
-          <p className="text-muted/40 text-sm font-black uppercase tracking-[0.5em]">
+        <div className="max-w-[1700px] mx-auto mt-24 md:mt-64 pt-12 border-t border-muted/20">
+          <p className="text-muted/40 text-xs font-black uppercase tracking-[0.5em]">
             © 2026 Newron. MIT Licensed.
           </p>
         </div>
