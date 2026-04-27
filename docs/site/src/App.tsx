@@ -1,16 +1,6 @@
 import { motion, useScroll, useMotionValueEvent } from "framer-motion";
 import { useState, useEffect } from "react";
-import {
-  Newspaper,
-  Search,
-  Globe,
-  Cpu,
-  Layers,
-  ArrowRight,
-  Moon,
-  Sun,
-  ShieldCheck,
-} from "lucide-react";
+import { Newspaper, Globe, Cpu, Layers, Moon, Sun } from "lucide-react";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
