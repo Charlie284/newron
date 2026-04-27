@@ -218,14 +218,19 @@ const App = () => {
                   </div>
                 </a>
 
-                <div className="flex items-center gap-4 bg-white/5 dark:bg-white/[0.03] text-foreground px-8 md:px-10 py-5 rounded-[2rem] opacity-30 grayscale border border-white/5 select-none">
+                <a
+                  href="http://app.newron.clh.lol/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-4 bg-white/5 dark:bg-white/[0.03] text-foreground px-8 md:px-10 py-5 rounded-[2rem] hover:bg-white/10 transition-all duration-300 border border-white/10 active:scale-95"
+                >
                   <div className="text-left">
-                    <p className="text-[10px] uppercase font-black tracking-widest leading-none mb-1">
-                      Coming to
+                    <p className="text-[10px] uppercase font-black opacity-70 tracking-widest leading-none mb-1">
+                      Open
                     </p>
-                    <p className="text-3xl font-black leading-none">Mobile</p>
+                    <p className="text-3xl font-black leading-none">Web App</p>
                   </div>
-                </div>
+                </a>
               </div>
             </div>
           </motion.div>
