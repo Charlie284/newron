@@ -180,6 +180,7 @@ class _NewsHomePageState extends State<NewsHomePage> {
     'Health',
     'Sports',
     'Policy',
+    'F1',
   ];
 
   static const _fallbackModelOptions = <_ModelOption>[
