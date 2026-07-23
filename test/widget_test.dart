@@ -30,7 +30,9 @@ void main() {
       expect(find.byIcon(Icons.refresh_rounded), findsOneWidget);
       expect(find.byIcon(Icons.light_mode_rounded), findsOneWidget);
       expect(
-        find.text('Background loading is still in progress.'),
+        find.text(
+          'Live sources could not be reached. Check the connection and refresh again.',
+        ),
         findsOneWidget,
       );
     });

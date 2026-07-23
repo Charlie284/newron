@@ -5,8 +5,7 @@
     "display": "standalone",
     "background_color": "#0C0703",
     "theme_color": "#0C0703",
-    "description": "A new Flutter project.",
-    "orientation": "portrait-primary",
+    "description": "Research-augmented news briefings, source context, and bias analysis.",
     "prefer_related_applications": false,
     "icons": [
         {

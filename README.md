@@ -36,6 +36,30 @@ flutter pub get
 flutter run
 ```
 
+### Deploy to Cloudflare Pages
+
+The web build uses a same-origin Pages Function for AI and RSS requests. This
+avoids browser CORS and mixed-content failures while native builds continue to
+use the hosted API directly.
+
+```bash
+flutter build web --release
+npx wrangler pages deploy
+```
+
+The included `wrangler.toml` publishes `build/web`, and `functions/api/[[path]].js`
+provides `/api/models`, `/api/chat/completions`, and the allowlisted `/api/rss`
+gateway. Set the optional `NEWRON_UPSTREAM_API_BASE_URL` Pages environment
+variable if the upstream AI Worker moves.
+
+For a different web host, deploy an equivalent same-origin gateway or build
+with an absolute CORS-enabled gateway URL:
+
+```bash
+flutter build web --release \
+  --dart-define=NEWRON_API_BASE_URL=https://api.example.com/v1
+```
+
 ## Contributing
 
 Newron is Free and Open Source Software. Contributions, bug reports, and feature requests are welcome!

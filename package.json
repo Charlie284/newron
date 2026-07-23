@@ -1,0 +1,9 @@
+{
+  "name": "newron-web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:web": "flutter build web --release",
+    "test:web-gateway": "node --test test/web_gateway_test.mjs"
+  }
+}

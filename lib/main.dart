@@ -7,6 +7,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'app_config.dart';
+
 void main() {
   runApp(const NewronApp());
 }
@@ -262,7 +264,7 @@ class _NewsHomePageState extends State<NewsHomePage> {
 
     try {
       final response = await http.get(
-        Uri.parse('https://royal-union-f92a.charlh048.workers.dev/v1/models'),
+        AppConfig.apiUri('models'),
         headers: const {
           'Content-Type': 'application/json',
           'HTTP-Referer': 'https://newron.local',
@@ -356,18 +358,6 @@ class _NewsHomePageState extends State<NewsHomePage> {
     );
   }
 
-  String? _formatContextLength(dynamic value) {
-    if (value is! num) {
-      return null;
-    }
-    final count = value.toInt();
-    if (count >= 1000) {
-      final compact = (count / 1000).toStringAsFixed(count % 1000 == 0 ? 0 : 1);
-      return '${compact}K context';
-    }
-    return '$count context';
-  }
-
   Future<void> _setSelectedModel(String modelId) async {
     final preferences = await SharedPreferences.getInstance();
     await preferences.setString(_modelKey, modelId);
@@ -440,11 +430,10 @@ class _NewsHomePageState extends State<NewsHomePage> {
                 const SizedBox(height: 20),
                 _SettingsSection(
                   title: 'Appearance',
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: cardColor,
-                      borderRadius: BorderRadius.circular(18),
-                    ),
+                  child: Material(
+                    color: cardColor,
+                    borderRadius: BorderRadius.circular(18),
+                    clipBehavior: Clip.antiAlias,
                     child: Column(
                       children: [
                         ListTile(
@@ -475,11 +464,10 @@ class _NewsHomePageState extends State<NewsHomePage> {
                 const SizedBox(height: 16),
                 _SettingsSection(
                   title: 'Briefing',
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: cardColor,
-                      borderRadius: BorderRadius.circular(18),
-                    ),
+                  child: Material(
+                    color: cardColor,
+                    borderRadius: BorderRadius.circular(18),
+                    clipBehavior: Clip.antiAlias,
                     child: Column(
                       children: [
                         ListTile(
@@ -622,11 +610,10 @@ class _NewsHomePageState extends State<NewsHomePage> {
                 const SizedBox(height: 16),
                 _SettingsSection(
                   title: 'Data',
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: cardColor,
-                      borderRadius: BorderRadius.circular(18),
-                    ),
+                  child: Material(
+                    color: cardColor,
+                    borderRadius: BorderRadius.circular(18),
+                    clipBehavior: Clip.antiAlias,
                     child: Column(
                       children: [
                         ListTile(
@@ -666,11 +653,10 @@ class _NewsHomePageState extends State<NewsHomePage> {
                 const SizedBox(height: 16),
                 _SettingsSection(
                   title: 'About',
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: cardColor,
-                      borderRadius: BorderRadius.circular(18),
-                    ),
+                  child: Material(
+                    color: cardColor,
+                    borderRadius: BorderRadius.circular(18),
+                    clipBehavior: Clip.antiAlias,
                     child: Column(
                       children: [
                         ListTile(
@@ -1402,32 +1388,32 @@ class _NewsHomePageState extends State<NewsHomePage> {
 
   Future<NewsDigest?> _fetchDigest(List<NewsArticle> articles) async {
     try {
-      final response = await http.post(
-        Uri.parse(
-          'https://royal-union-f92a.charlh048.workers.dev/v1/chat/completions',
-        ),
-        headers: {
-          'Content-Type': 'application/json',
-          'HTTP-Referer': 'https://newron.local',
-          'X-Title': 'Newron News App',
-        },
-        body: jsonEncode({
-          'model': _selectedModelId,
-          'web_search': true, // Enable research tools for main digest
-          'messages': [
-            {
-              'role': 'system',
-              'content':
-                  'You are building a research-augmented news digest for the Newron app. Infer political leaning from all provided context. Use your search tools to find the latest updates if the provided info is thin. Consolidate overlapping stories. Return strict JSON with keys "brief" and "articles". "brief" must be 2 concise sentences. "articles" must match input order, each with keys "headline", "leaning_score", "leaning_label", and "leaning_reason".',
+      final response = await http
+          .post(
+            AppConfig.apiUri('chat/completions'),
+            headers: {
+              'Content-Type': 'application/json',
+              'HTTP-Referer': 'https://newron.local',
+              'X-Title': 'Newron News App',
             },
-            {
-              'role': 'user',
-              'content':
-                  'Analyze these news items and use your tools to find missing context:\n${_articlesPrompt(articles)}',
-            },
-          ],
-        }),
-      );
+            body: jsonEncode({
+              'model': _selectedModelId,
+              'web_search': true, // Enable research tools for main digest
+              'messages': [
+                {
+                  'role': 'system',
+                  'content':
+                      'You are building a research-augmented news digest for the Newron app. Infer political leaning from all provided context. Use your search tools to find the latest updates if the provided info is thin. Consolidate overlapping stories. Return strict JSON with keys "brief" and "articles". "brief" must be 2 concise sentences. "articles" must match input order, each with keys "headline", "leaning_score", "leaning_label", and "leaning_reason".',
+                },
+                {
+                  'role': 'user',
+                  'content':
+                      'Analyze these news items and use your tools to find missing context:\n${_articlesPrompt(articles)}',
+                },
+              ],
+            }),
+          )
+          .timeout(const Duration(seconds: 45));
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
         return null;
@@ -1516,32 +1502,32 @@ class _NewsHomePageState extends State<NewsHomePage> {
     }
 
     try {
-      final response = await http.post(
-        Uri.parse(
-          'https://royal-union-f92a.charlh048.workers.dev/v1/chat/completions',
-        ),
-        headers: {
-          'Content-Type': 'application/json',
-          'HTTP-Referer': 'https://newron.local',
-          'X-Title': 'Newron News App',
-        },
-        body: jsonEncode({
-          'model': _selectedModelId,
-          'web_search': true, // Enable research tools for topic summaries
-          'messages': [
-            {
-              'role': 'system',
-              'content':
-                  'You write fun, smart, research-augmented news briefings. Use your tools to find the most recent developments on this topic. Organize it into 6 short sections with emoji headers. Each section should have 2 to 4 sentences. Use a lively voice and keep everything plain text only.',
+      final response = await http
+          .post(
+            AppConfig.apiUri('chat/completions'),
+            headers: {
+              'Content-Type': 'application/json',
+              'HTTP-Referer': 'https://newron.local',
+              'X-Title': 'Newron News App',
             },
-            {
-              'role': 'user',
-              'content':
-                  'Topic: $topic\nBias lens: ${_sliderLabel(bias)}\nLocal Articles: ${_articlesPrompt(articles)}',
-            },
-          ],
-        }),
-      );
+            body: jsonEncode({
+              'model': _selectedModelId,
+              'web_search': true, // Enable research tools for topic summaries
+              'messages': [
+                {
+                  'role': 'system',
+                  'content':
+                      'You write fun, smart, research-augmented news briefings. Use your tools to find the most recent developments on this topic. Organize it into 6 short sections with emoji headers. Each section should have 2 to 4 sentences. Use a lively voice and keep everything plain text only.',
+                },
+                {
+                  'role': 'user',
+                  'content':
+                      'Topic: $topic\nBias lens: ${_sliderLabel(bias)}\nLocal Articles: ${_articlesPrompt(articles)}',
+                },
+              ],
+            }),
+          )
+          .timeout(const Duration(seconds: 45));
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
         return null;
@@ -1588,32 +1574,32 @@ class _NewsHomePageState extends State<NewsHomePage> {
     }
 
     try {
-      final response = await http.post(
-        Uri.parse(
-          'https://royal-union-f92a.charlh048.workers.dev/v1/chat/completions',
-        ),
-        headers: {
-          'Content-Type': 'application/json',
-          'HTTP-Referer': 'https://newron.local',
-          'X-Title': 'Newron News App',
-        },
-        body: jsonEncode({
-          'model': _selectedModelId,
-          'web_search': true, // Signal to the worker to use DDGS/Search
-          'messages': [
-            {
-              'role': 'system',
-              'content':
-                  'You are a research assistant for the Newron news app. Use the provided web search results and articles to explain the requested topic in 3-4 concise paragraphs. Use a smart, lively voice and include emojis. Focus on facts and recent developments. Plain text only.',
+      final response = await http
+          .post(
+            AppConfig.apiUri('chat/completions'),
+            headers: {
+              'Content-Type': 'application/json',
+              'HTTP-Referer': 'https://newron.local',
+              'X-Title': 'Newron News App',
             },
-            {
-              'role': 'user',
-              'content':
-                  'Topic to research: $focusTerm\nBias lens: ${_sliderLabel(_leaningPreference)}\nLocal Articles: ${_articlesPrompt(relatedArticles)}',
-            },
-          ],
-        }),
-      );
+            body: jsonEncode({
+              'model': _selectedModelId,
+              'web_search': true, // Signal to the worker to use DDGS/Search
+              'messages': [
+                {
+                  'role': 'system',
+                  'content':
+                      'You are a research assistant for the Newron news app. Use the provided web search results and articles to explain the requested topic in 3-4 concise paragraphs. Use a smart, lively voice and include emojis. Focus on facts and recent developments. Plain text only.',
+                },
+                {
+                  'role': 'user',
+                  'content':
+                      'Topic to research: $focusTerm\nBias lens: ${_sliderLabel(_leaningPreference)}\nLocal Articles: ${_articlesPrompt(relatedArticles)}',
+                },
+              ],
+            }),
+          )
+          .timeout(const Duration(seconds: 45));
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
         return null;
@@ -1660,31 +1646,31 @@ class _NewsHomePageState extends State<NewsHomePage> {
     }
 
     try {
-      final response = await http.post(
-        Uri.parse(
-          'https://royal-union-f92a.charlh048.workers.dev/v1/chat/completions',
-        ),
-        headers: {
-          'Content-Type': 'application/json',
-          'HTTP-Referer': 'https://newron.local',
-          'X-Title': 'Newron News App',
-        },
-        body: jsonEncode({
-          'model': _selectedModelId,
-          'messages': [
-            {
-              'role': 'system',
-              'content':
-                  'You are a careful fact-check assistant for a text-only briefing app. Using only the provided articles, write a plain-text fact check in 4 short sections with emoji headers: what most sources agree on, what is still disputed or unclear, what looks overstated or weakly supported, and the bottom line. Be concrete and cautious. Do not claim verification outside the provided reporting. Do not mention that you are an AI.',
+      final response = await http
+          .post(
+            AppConfig.apiUri('chat/completions'),
+            headers: {
+              'Content-Type': 'application/json',
+              'HTTP-Referer': 'https://newron.local',
+              'X-Title': 'Newron News App',
             },
-            {
-              'role': 'user',
-              'content':
-                  'Topic: $topic\nBias lens requested by user: ${_sliderLabel(bias)}\nFact-check the current summary against these articles only:\n${_articlesPrompt(articles)}',
-            },
-          ],
-        }),
-      );
+            body: jsonEncode({
+              'model': _selectedModelId,
+              'messages': [
+                {
+                  'role': 'system',
+                  'content':
+                      'You are a careful fact-check assistant for a text-only briefing app. Using only the provided articles, write a plain-text fact check in 4 short sections with emoji headers: what most sources agree on, what is still disputed or unclear, what looks overstated or weakly supported, and the bottom line. Be concrete and cautious. Do not claim verification outside the provided reporting. Do not mention that you are an AI.',
+                },
+                {
+                  'role': 'user',
+                  'content':
+                      'Topic: $topic\nBias lens requested by user: ${_sliderLabel(bias)}\nFact-check the current summary against these articles only:\n${_articlesPrompt(articles)}',
+                },
+              ],
+            }),
+          )
+          .timeout(const Duration(seconds: 45));
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
         return null;
@@ -1739,10 +1725,8 @@ class _NewsHomePageState extends State<NewsHomePage> {
         );
       }
 
-      final proxiedUrl =
-          'https://api.allorigins.win/raw?url=${Uri.encodeComponent(url)}';
       final response = await http
-          .get(Uri.parse(proxiedUrl))
+          .get(AppConfig.rssUri(url))
           .timeout(const Duration(seconds: 12));
       return _TextResponse(
         statusCode: response.statusCode,
@@ -2180,107 +2164,6 @@ class _NewsHomePageState extends State<NewsHomePage> {
     return bestScore > 0 ? bestTopic : null;
   }
 
-  List<String> _focusTermsForArticles(List<NewsArticle> articles) {
-    final scoreByTerm = <String, int>{};
-
-    for (final article in articles) {
-      final terms = _extractArticleTerms(article);
-      for (final term in terms) {
-        scoreByTerm.update(term, (value) => value + 1, ifAbsent: () => 1);
-      }
-    }
-
-    final rankedTerms = scoreByTerm.entries.toList()
-      ..sort((a, b) {
-        final scoreComparison = b.value.compareTo(a.value);
-        if (scoreComparison != 0) {
-          return scoreComparison;
-        }
-        return a.key.compareTo(b.key);
-      });
-
-    return rankedTerms
-        .map((entry) => entry.key)
-        .take(6)
-        .toList(growable: false);
-  }
-
-  List<String> _extractArticleTerms(NewsArticle article) {
-    final candidates = <String>{};
-    final titleMatches = RegExp(
-      r'\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2}\b',
-    ).allMatches(article.headline);
-
-    for (final match in titleMatches) {
-      final value = (match.group(0) ?? '').trim();
-      if (_isUsefulFocusTerm(value)) {
-        candidates.add(value);
-      }
-    }
-
-    final tokenMatches = RegExp(
-      r"\b[A-Za-z][A-Za-z'-]{3,}\b",
-    ).allMatches('${article.headline} ${article.summary}');
-    for (final match in tokenMatches) {
-      final token = _titleCase((match.group(0) ?? '').trim());
-      if (_isUsefulFocusTerm(token)) {
-        candidates.add(token);
-      }
-      if (candidates.length >= 10) {
-        break;
-      }
-    }
-
-    return candidates.take(6).toList(growable: false);
-  }
-
-  bool _isUsefulFocusTerm(String value) {
-    const blocked = <String>{
-      'The',
-      'That',
-      'This',
-      'With',
-      'From',
-      'What',
-      'When',
-      'Where',
-      'After',
-      'Before',
-      'Under',
-      'About',
-      'Against',
-      'United States',
-      'Breaking News',
-      'Top Stories',
-    };
-
-    if (value.length < 4 || blocked.contains(value)) {
-      return false;
-    }
-
-    final lowered = value.toLowerCase();
-    const stopwords = <String>{
-      'news',
-      'story',
-      'stories',
-      'latest',
-      'video',
-      'update',
-      'updates',
-      'report',
-      'reports',
-      'analysis',
-      'today',
-      'says',
-    };
-
-    if (stopwords.contains(lowered)) {
-      return false;
-    }
-
-    return true;
-  }
-
   String _titleCase(String value) {
     if (value.isEmpty) {
       return value;
@@ -2497,7 +2380,6 @@ class _NewsHomePageState extends State<NewsHomePage> {
             final digest = _displayDigest;
             final allArticles = digest?.articles ?? const <NewsArticle>[];
             final visibleArticles = _applySelection(allArticles);
-            final focusTerms = _focusTermsForArticles(visibleArticles);
             final brief = digest?.brief;
             final hasArticles = allArticles.isNotEmpty;
 
@@ -2644,7 +2526,7 @@ class _NewsHomePageState extends State<NewsHomePage> {
                               'Researching and building summary...',
                               style: TextStyle(
                                 color: theme.textTheme.bodyLarge?.color
-                                    ?.withOpacity(0.7),
+                                    ?.withValues(alpha: 0.7),
                                 fontSize: 17,
                                 height: 1.6,
                                 fontStyle: FontStyle.italic,
@@ -2676,7 +2558,9 @@ class _NewsHomePageState extends State<NewsHomePage> {
                       ),
                     if (!hasArticles)
                       Text(
-                        'Building the latest summary...',
+                        _isRefreshing
+                            ? 'Building the latest summary...'
+                            : 'No live stories are available right now.',
                         style: TextStyle(
                           color: theme.textTheme.bodyLarge?.color,
                           fontSize: 17,
@@ -2717,7 +2601,7 @@ class _NewsHomePageState extends State<NewsHomePage> {
                               'Searching the web and analyzing...',
                               style: TextStyle(
                                 color: theme.textTheme.bodyLarge?.color
-                                    ?.withOpacity(0.7),
+                                    ?.withValues(alpha: 0.7),
                                 fontSize: 16,
                                 height: 1.6,
                                 fontStyle: FontStyle.italic,
@@ -2774,10 +2658,12 @@ class _NewsHomePageState extends State<NewsHomePage> {
                     const SizedBox(height: 28),
                     Text(
                       hasArticles
-                          ? _isRefreshing
+                          ? (_isRefreshing
                                 ? 'Showing saved coverage while newer reporting loads.'
-                                : '${visibleArticles.length} articles informed this summary across live sources.'
-                          : 'Background loading is still in progress.',
+                                : '${visibleArticles.length} articles informed this summary across live sources.')
+                          : (_isRefreshing
+                                ? 'Background loading is still in progress.'
+                                : 'Live sources could not be reached. Check the connection and refresh again.'),
                       style: theme.textTheme.bodyMedium,
                     ),
                   ],
