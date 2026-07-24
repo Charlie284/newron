@@ -703,7 +703,9 @@ class _NewsHomePageState extends State<NewsHomePage> {
         child: RefreshIndicator(
           onRefresh: _refresh,
           child: CustomScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
+            physics: const ClampingScrollPhysics(
+              parent: AlwaysScrollableScrollPhysics(),
+            ),
             slivers: [
               SliverToBoxAdapter(child: _buildHeader(context, digest)),
               SliverToBoxAdapter(child: _buildTopics(context)),
@@ -798,10 +800,19 @@ class _NewsHomePageState extends State<NewsHomePage> {
             separatorBuilder: (_, _) => const SizedBox(width: 8),
             itemBuilder: (context, index) {
               final topic = newsCategories[index];
-              return ChoiceChip(
-                label: Text(topic),
-                selected: topic == _selectedTopic,
-                onSelected: (_) => _selectTopic(topic),
+              final selected = topic == _selectedTopic;
+              return Semantics(
+                label: topic,
+                button: true,
+                selected: selected,
+                inMutuallyExclusiveGroup: true,
+                child: ExcludeSemantics(
+                  child: ChoiceChip(
+                    label: Text(topic),
+                    selected: selected,
+                    onSelected: (_) => _selectTopic(topic),
+                  ),
+                ),
               );
             },
           ),
@@ -1020,7 +1031,9 @@ class _BriefingPanel extends StatelessWidget {
               const SizedBox(height: 10),
               Semantics(
                 liveRegion: true,
-                child: Text('Generating a source-grounded brief…'),
+                child: Text(
+                  'Generating a source-grounded brief… Usually under 15 seconds.',
+                ),
               ),
             ],
             if (aiError != null) ...[
@@ -1067,7 +1080,7 @@ class _BriefingPanel extends StatelessWidget {
   }
 }
 
-class _CoverageList extends StatelessWidget {
+class _CoverageList extends StatefulWidget {
   const _CoverageList({
     required this.topic,
     required this.articles,
@@ -1081,7 +1094,27 @@ class _CoverageList extends StatelessWidget {
   final ValueChanged<NewsArticle> onExplore;
 
   @override
+  State<_CoverageList> createState() => _CoverageListState();
+}
+
+class _CoverageListState extends State<_CoverageList> {
+  static const _pageSize = 10;
+  int _visibleCount = _pageSize;
+
+  @override
+  void didUpdateWidget(covariant _CoverageList oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.topic != widget.topic ||
+        oldWidget.articles.length != widget.articles.length) {
+      _visibleCount = _pageSize;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final visibleCount = _visibleCount > widget.articles.length
+        ? widget.articles.length
+        : _visibleCount;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1093,17 +1126,32 @@ class _CoverageList extends StatelessWidget {
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
             ),
-            Text('${articles.length} reports'),
+            Text('${widget.articles.length} reports'),
           ],
         ),
         const SizedBox(height: 14),
-        for (var index = 0; index < articles.length; index++) ...[
+        for (var index = 0; index < visibleCount; index++) ...[
           _ArticleCard(
-            article: articles[index],
-            onOpen: () => onOpen(articles[index]),
-            onExplore: () => onExplore(articles[index]),
+            article: widget.articles[index],
+            onOpen: () => widget.onOpen(widget.articles[index]),
+            onExplore: () => widget.onExplore(widget.articles[index]),
           ),
-          if (index != articles.length - 1) const SizedBox(height: 12),
+          if (index != visibleCount - 1) const SizedBox(height: 12),
+        ],
+        if (visibleCount < widget.articles.length) ...[
+          const SizedBox(height: 16),
+          OutlinedButton.icon(
+            onPressed: () => setState(() {
+              final next = _visibleCount + _pageSize;
+              _visibleCount = next > widget.articles.length
+                  ? widget.articles.length
+                  : next;
+            }),
+            icon: const Icon(Icons.expand_more_rounded),
+            label: Text(
+              'Show ${widget.articles.length - visibleCount > _pageSize ? _pageSize : widget.articles.length - visibleCount} more reports',
+            ),
+          ),
         ],
       ],
     );
@@ -1301,6 +1349,7 @@ class _FactCheckSheet extends StatefulWidget {
 class _FactCheckSheetState extends State<_FactCheckSheet> {
   FactCheckResult? _result;
   String? _error;
+  bool _isLoading = true;
 
   @override
   void initState() {
@@ -1309,6 +1358,13 @@ class _FactCheckSheetState extends State<_FactCheckSheet> {
   }
 
   Future<void> _load() async {
+    if (!_isLoading) {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+        _result = null;
+      });
+    }
     try {
       final result = await widget.assistant.factCheck(
         topic: widget.digest.topic,
@@ -1318,11 +1374,17 @@ class _FactCheckSheetState extends State<_FactCheckSheet> {
         articles: widget.digest.articles,
       );
       if (mounted) {
-        setState(() => _result = result);
+        setState(() {
+          _result = result;
+          _isLoading = false;
+        });
       }
     } on AiRequestException catch (error) {
       if (mounted) {
-        setState(() => _error = error.message);
+        setState(() {
+          _error = error.message;
+          _isLoading = false;
+        });
       }
     }
   }
@@ -1355,20 +1417,41 @@ class _FactCheckSheetState extends State<_FactCheckSheet> {
                 'This checks the displayed AI brief against the same supplied articles. It does not independently prove every real-world claim.',
               ),
               const SizedBox(height: 20),
-              if (_result == null && _error == null) ...[
+              if (_isLoading) ...[
                 const LinearProgressIndicator(),
                 const SizedBox(height: 12),
                 Semantics(
                   liveRegion: true,
-                  child: Text('Comparing the brief with cited reporting…'),
+                  child: Text(
+                    'Comparing the brief with cited reporting… Usually under 15 seconds.',
+                  ),
                 ),
               ],
-              if (_error != null)
+              if (_error != null) ...[
                 Text(
                   _error!,
                   style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: _load,
+                  icon: const Icon(Icons.refresh_rounded),
+                  label: const Text('Try fact check again'),
+                ),
+              ],
               if (_result != null) ...[
+                if (!_result!.usedModelInference) ...[
+                  Semantics(
+                    liveRegion: true,
+                    child: Text(
+                      'The AI comparison was unavailable. This source-only result identifies what to verify in the originals.',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
                 SelectionArea(
                   child: Text(
                     _result!.summary,
@@ -1417,8 +1500,26 @@ class _ExploreSheetState extends State<_ExploreSheet> {
   String? _error;
   bool _isLoading = false;
 
+  bool get _hasValidQuestion => _controller.text.trim().length >= 4;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(_questionChanged);
+  }
+
+  void _questionChanged() {
+    if (mounted) {
+      setState(() {
+        _error = null;
+        _result = null;
+      });
+    }
+  }
+
   @override
   void dispose() {
+    _controller.removeListener(_questionChanged);
     _controller.dispose();
     super.dispose();
   }
@@ -1486,21 +1587,33 @@ class _ExploreSheetState extends State<_ExploreSheet> {
                 minLines: 2,
                 maxLines: 4,
                 textInputAction: TextInputAction.done,
-                onSubmitted: (_) => _submit(),
-                decoration: const InputDecoration(
+                onSubmitted: (_) {
+                  if (_hasValidQuestion) {
+                    _submit();
+                  }
+                },
+                decoration: InputDecoration(
                   labelText: 'Question about this article',
                   hintText: 'What context or uncertainty should I notice?',
+                  helperText: 'Ask at least 4 characters, up to 240.',
+                  errorText: _controller.text.isNotEmpty && !_hasValidQuestion
+                      ? 'Enter at least 4 characters.'
+                      : null,
                 ),
               ),
               const SizedBox(height: 10),
               FilledButton.icon(
-                onPressed: _isLoading ? null : _submit,
+                onPressed: _isLoading || !_hasValidQuestion ? null : _submit,
                 icon: const Icon(Icons.manage_search),
                 label: const Text('Analyze supplied report'),
               ),
               if (_isLoading) ...[
                 const SizedBox(height: 18),
                 const LinearProgressIndicator(),
+                const SizedBox(height: 10),
+                const Text(
+                  'Analyzing the supplied report… Usually under 15 seconds.',
+                ),
               ],
               if (_error != null) ...[
                 const SizedBox(height: 18),
@@ -1511,6 +1624,15 @@ class _ExploreSheetState extends State<_ExploreSheet> {
               ],
               if (_result != null) ...[
                 const SizedBox(height: 22),
+                if (!_result!.usedModelInference) ...[
+                  Text(
+                    'The AI provider was unavailable. Showing a source-only fallback.',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                ],
                 SelectionArea(
                   child: Text(
                     _result!.summary,

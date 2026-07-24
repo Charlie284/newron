@@ -172,6 +172,94 @@ void main() {
     expect(result.citationIds, [articles.first.id]);
   });
 
+  test('fact check sends only articles cited by the displayed brief', () async {
+    final articles = List.generate(
+      3,
+      (index) => article.copyWith(
+        id: 'article-${(index + 1).toRadixString(16).padLeft(8, '0')}',
+        headline: 'Report ${index + 1}',
+      ),
+    );
+    late Map<String, dynamic> requestBody;
+    final assistant = HttpAiAssistant(
+      client: MockClient((request) async {
+        requestBody = jsonDecode(request.body) as Map<String, dynamic>;
+        return http.Response(
+          jsonEncode({
+            'summary': 'The displayed claim is supported by the cited report.',
+            'source_ids': [articles[1].id],
+          }),
+          200,
+        );
+      }),
+    );
+
+    await assistant.factCheck(
+      topic: 'Technology',
+      model: 'google/test:free',
+      brief: 'A displayed brief with enough detail to evaluate.',
+      citationIds: [articles[1].id],
+      articles: articles,
+    );
+
+    final submitted = requestBody['articles'] as List<dynamic>;
+    expect(submitted, hasLength(1));
+    expect((submitted.single as Map<String, dynamic>)['id'], articles[1].id);
+  });
+
+  test('rejects visibly truncated AI words instead of displaying them', () async {
+    final suspiciousArticle = article.copyWith(
+      headline: 'A documented massive attack',
+    );
+    final assistant = HttpAiAssistant(
+      client: MockClient(
+        (_) async => http.Response(
+          jsonEncode({
+            'brief':
+                "The president is considering an 'assive attack according to the supplied report.",
+            'citation_ids': [suspiciousArticle.id],
+          }),
+          200,
+        ),
+      ),
+    );
+
+    expect(
+      () => assistant.createBrief(
+        topic: 'Technology',
+        model: 'google/test:free',
+        articles: [suspiciousArticle],
+      ),
+      throwsA(isA<AiRequestException>()),
+    );
+  });
+
+  test('surfaces the gateway error and retry guidance', () async {
+    final assistant = HttpAiAssistant(
+      client: MockClient(
+        (_) async => http.Response(
+          jsonEncode({'error': 'The AI provider is busy'}),
+          502,
+        ),
+      ),
+    );
+
+    expect(
+      () => assistant.explore(
+        model: 'google/test:free',
+        question: 'What evidence is supplied?',
+        article: article,
+      ),
+      throwsA(
+        isA<AiRequestException>().having(
+          (error) => error.message,
+          'message',
+          contains('AI provider is busy'),
+        ),
+      ),
+    );
+  });
+
   test('normalizes markdown control characters from AI text', () {
     expect(
       normalizeAiText(

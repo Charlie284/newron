@@ -116,4 +116,40 @@ void main() {
     expect(find.text('Model used for opt-in analysis'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('Explore requires a meaningful question before submission', (
+    tester,
+  ) async {
+    await pumpApp(tester);
+
+    await tester.ensureVisible(find.text('Explore').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Explore').first);
+    await tester.pumpAndSettle();
+
+    FilledButton analyzeButton() => tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, 'Analyze supplied report'),
+    );
+
+    expect(analyzeButton().onPressed, isNull);
+    await tester.enterText(find.byType(TextField), 'Why');
+    await tester.pump();
+    expect(analyzeButton().onPressed, isNull);
+    expect(find.text('Enter at least 4 characters.'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField), 'Why now?');
+    await tester.pump();
+    expect(analyzeButton().onPressed, isNotNull);
+  });
+
+  testWidgets('main feed uses clamped scrolling to avoid blank overscroll', (
+    tester,
+  ) async {
+    await pumpApp(tester);
+
+    final scrollView = tester.widget<CustomScrollView>(
+      find.byType(CustomScrollView),
+    );
+    expect(scrollView.physics, isA<ClampingScrollPhysics>());
+  });
 }

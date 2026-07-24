@@ -242,10 +242,15 @@ class ArticleAnalysis {
 
 @immutable
 class FactCheckResult {
-  const FactCheckResult({required this.summary, required this.sourceIds});
+  const FactCheckResult({
+    required this.summary,
+    required this.sourceIds,
+    this.usedModelInference = true,
+  });
 
   final String summary;
   final List<String> sourceIds;
+  final bool usedModelInference;
 }
 
 String stableArticleId({

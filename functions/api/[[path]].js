@@ -5,7 +5,7 @@ const MAX_MODELS_BYTES = 512 * 1024;
 const MAX_AI_RESPONSE_BYTES = 512 * 1024;
 const MAX_REQUEST_BYTES = 64 * 1024;
 const RSS_TIMEOUT_MS = 10_000;
-const AI_TIMEOUT_MS = 30_000;
+const AI_TIMEOUT_MS = 15_000;
 const MAX_REDIRECTS = 3;
 const RATE_WINDOW_MS = 60_000;
 const RATE_LIMIT = 12;
@@ -84,10 +84,8 @@ export const allowedRssHosts = new Set([
   'www.phillyvoice.com',
   'www.pravda.com.ua',
   'www.premiumtimesng.com',
-  'www.publishedreporter.com',
   'www.sciencedaily.com',
   'www.space.com',
-  'www.texasobserver.org',
   'www.theguardian.com',
   'www.themoscowtimes.com',
   'www.thestar.com',
@@ -240,36 +238,53 @@ async function proxyAiTask(context, task) {
       AI_TIMEOUT_MS,
     );
   } catch (error) {
-    if (task === 'brief' && error?.name === 'TimeoutError') {
-      return jsonResponse(200, sourceOnlyBrief(validated.value));
+    if (error?.name === 'TimeoutError') {
+      return jsonResponse(200, sourceOnlyResult(task, validated.value));
     }
     throw error;
   }
   if (response.status === 429) {
-    return task === 'brief'
-      ? jsonResponse(200, sourceOnlyBrief(validated.value))
-      : jsonResponse(429, {error: 'The AI provider is busy'}, {'Retry-After': '30'});
+    return jsonResponse(
+      200,
+      sourceOnlyResult(task, validated.value),
+      {'Retry-After': '30'},
+    );
   }
   if (!response.ok) {
-    return task === 'brief'
-      ? jsonResponse(200, sourceOnlyBrief(validated.value))
-      : jsonResponse(502, {error: 'The AI provider rejected the task'});
+    return jsonResponse(200, sourceOnlyResult(task, validated.value));
   }
   const bytes = await readLimitedBody(response, MAX_AI_RESPONSE_BYTES);
   let providerPayload;
   try {
     providerPayload = JSON.parse(new TextDecoder().decode(bytes));
   } catch (_) {
-    return task === 'brief'
-      ? jsonResponse(200, sourceOnlyBrief(validated.value))
-      : jsonResponse(502, {error: 'The AI provider returned unreadable data'});
+    return jsonResponse(200, sourceOnlyResult(task, validated.value));
   }
   const normalized = normalizeAiProviderResult(task, providerPayload, validated.value);
   return normalized
     ? jsonResponse(200, normalized)
-    : task === 'brief'
-      ? jsonResponse(200, sourceOnlyBrief(validated.value))
-      : jsonResponse(502, {error: 'The AI provider returned an ungrounded answer'});
+    : jsonResponse(200, sourceOnlyResult(task, validated.value));
+}
+
+function sourceOnlyResult(task, value) {
+  if (task === 'brief') {
+    return sourceOnlyBrief(value);
+  }
+  if (task === 'fact-check') {
+    const citedIds = new Set(value.citationIds);
+    const cited = value.articles.filter((article) => citedIds.has(article.id));
+    const sourceNames = cited.map((article) => article.source).join(', ');
+    return {
+      summary: `Automated comparison was unavailable. The displayed brief cites ${cited.length} supplied report${cited.length === 1 ? '' : 's'}${sourceNames ? ` from ${sourceNames}` : ''}. Open those originals to verify its claims.`,
+      source_ids: cited.map((article) => article.id),
+      generated_by: 'source_fallback',
+    };
+  }
+  return {
+    summary: `Automated analysis was unavailable. The supplied ${value.article.source} report says: ${value.article.summary || value.article.headline} Verify the details in the original report.`,
+    source_ids: [value.article.id],
+    generated_by: 'source_fallback',
+  };
 }
 
 function sourceOnlyBrief(value) {
@@ -295,7 +310,11 @@ function normalizeAiProviderResult(task, providerPayload, requestValue) {
     const allowedIds = new Set(requestValue.articles.map((article) => article.id));
     const brief = outputString(content.brief, 1_800);
     const citationIds = uniqueAllowedIds(content.citation_ids, allowedIds, 12);
-    if (brief.length < 40 || citationIds.length === 0) {
+    if (
+      brief.length < 40 ||
+      citationIds.length === 0 ||
+      hasLikelyDroppedInitial(brief, requestValue.articles)
+    ) {
       return null;
     }
     const articleAnalyses = [];
@@ -338,9 +357,28 @@ function normalizeAiProviderResult(task, providerPayload, requestValue) {
   );
   const summary = outputString(content.summary, 1_800);
   const sourceIds = uniqueAllowedIds(content.source_ids, allowedIds, 12);
-  return summary.length >= 20 && sourceIds.length > 0
+  return summary.length >= 20 &&
+      sourceIds.length > 0 &&
+      !hasLikelyDroppedInitial(
+        summary,
+        task === 'focus' ? [requestValue.article] : requestValue.articles,
+      )
     ? {summary, source_ids: sourceIds, generated_by: 'ai_provider'}
     : null;
+}
+
+function hasLikelyDroppedInitial(text, articles) {
+  const corpus = articles
+    .map((article) => `${article.headline} ${article.summary}`.toLowerCase())
+    .join(' ');
+  for (const match of text.toLowerCase().matchAll(/['’]([a-z]{4,})\b/g)) {
+    const suffix = match[1];
+    if ([...'abcdefghijklmnopqrstuvwxyz'].some((letter) =>
+      corpus.includes(`${letter}${suffix}`))) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function extractStructuredContent(providerPayload) {
@@ -560,8 +598,10 @@ function buildUpstreamRequest(task, value) {
     };
   } else {
     taskInstruction = [
-      'Answer the question using only the supplied report.',
-      'Name missing context or uncertainty when the report cannot answer it.',
+      'Answer the question directly using only the supplied report.',
+      'Identify the specific supplied detail that supports each part of the answer.',
+      'Do not merely repeat the headline or summary.',
+      'If the supplied report does not contain the requested evidence, say that clearly instead of inferring it.',
       'Return keys: summary (string) and source_ids (an array containing the supplied article ID).',
     ].join(' ');
     evidence = {question: value.question, sources: [value.article]};
@@ -570,7 +610,7 @@ function buildUpstreamRequest(task, value) {
   return {
     model: value.model,
     temperature: 0.1,
-    max_tokens: 900,
+    max_tokens: task === 'brief' ? 700 : task === 'fact-check' ? 500 : 350,
     reasoning: {effort: 'none', exclude: true},
     response_format: {type: 'json_object'},
     messages: [

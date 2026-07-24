@@ -158,11 +158,6 @@ const rssSources = <RssSource>[
     topic: 'Business',
   ),
   RssSource(
-    name: 'Texas Observer',
-    feedUrl: 'https://www.texasobserver.org/feed',
-    topic: 'Politics',
-  ),
-  RssSource(
     name: 'Denver Westword',
     feedUrl: 'https://www.westword.com/denver/Rss.xml',
     topic: 'Top Stories',
@@ -176,11 +171,6 @@ const rssSources = <RssSource>[
     name: 'Forest Hills Times',
     feedUrl: 'https://foresthillstimes.com/feed',
     topic: 'Top Stories',
-  ),
-  RssSource(
-    name: 'Published Reporter',
-    feedUrl: 'https://www.publishedreporter.com/feed',
-    topic: 'Politics',
   ),
   RssSource(
     name: 'New York Post',

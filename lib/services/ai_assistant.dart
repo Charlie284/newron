@@ -58,7 +58,7 @@ class HttpAiAssistant implements AiAssistant {
     : _client = client ?? http.Client(),
       _ownsClient = client == null;
 
-  static const requestTimeout = Duration(seconds: 32);
+  static const requestTimeout = Duration(seconds: 18);
   static const fallbackModels = <AiModelOption>[
     AiModelOption(
       id: 'inclusionai/ling-3.0-flash:free',
@@ -139,7 +139,9 @@ class HttpAiAssistant implements AiAssistant {
     final citations = _stringList(
       content['citation_ids'],
     ).where(allowedIds.contains).toSet().toList(growable: false);
-    if (brief.length < 40 || citations.isEmpty) {
+    if (brief.length < 40 ||
+        citations.isEmpty ||
+        _hasLikelyDroppedInitial(brief, articles)) {
       throw const AiRequestException(
         'The AI response was not grounded in the displayed sources. Try again.',
       );
@@ -185,12 +187,21 @@ class HttpAiAssistant implements AiAssistant {
     required List<NewsArticle> articles,
   }) async {
     final allowedIds = articles.map((article) => article.id).toSet();
+    final citedArticles = articles
+        .where((article) => citationIds.contains(article.id))
+        .take(5)
+        .toList(growable: false);
+    if (citedArticles.isEmpty) {
+      throw const AiRequestException(
+        'The displayed brief has no available cited reporting to check.',
+      );
+    }
     final payload = await _post('fact-check', {
       'model': model,
       'topic': topic,
       'brief': brief,
       'citation_ids': citationIds,
-      'articles': articles.take(12).map(_articlePayload).toList(),
+      'articles': citedArticles.map(_articlePayload).toList(),
     });
     return _groundedTextResult(payload, allowedIds);
   }
@@ -226,7 +237,11 @@ class HttpAiAssistant implements AiAssistant {
         'The AI response did not cite the supplied reporting. Try again.',
       );
     }
-    return FactCheckResult(summary: summary, sourceIds: sourceIds);
+    return FactCheckResult(
+      summary: summary,
+      sourceIds: sourceIds,
+      usedModelInference: payload['generated_by'] != 'source_fallback',
+    );
   }
 
   Future<Map<String, dynamic>> _post(
@@ -260,8 +275,10 @@ class HttpAiAssistant implements AiAssistant {
       );
     }
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw const AiRequestException(
-        'The AI service rejected this request. The source articles remain available.',
+      final gatewayMessage = _gatewayError(response.body);
+      throw AiRequestException(
+        gatewayMessage ??
+            'The AI service rejected this request. The source articles remain available. Try again.',
       );
     }
     try {
@@ -347,6 +364,41 @@ String? _safeAnalysisLabel(String value) {
     }
   }
   return null;
+}
+
+String? _gatewayError(String responseBody) {
+  try {
+    final decoded = jsonDecode(responseBody);
+    if (decoded is Map) {
+      final message = normalizeAiText(
+        '${decoded['error'] ?? ''}',
+        maxLength: 180,
+      );
+      if (message.isNotEmpty) {
+        return '$message. Try again; the source reporting remains available.';
+      }
+    }
+  } catch (_) {
+    // Fall through to the stable generic message.
+  }
+  return null;
+}
+
+bool _hasLikelyDroppedInitial(String text, List<NewsArticle> articles) {
+  final corpus = articles
+      .map((article) => '${article.headline} ${article.summary}'.toLowerCase())
+      .join(' ');
+  final suspicious = RegExp(r"['’]([a-z]{4,})\b");
+  const letters = 'abcdefghijklmnopqrstuvwxyz';
+  for (final match in suspicious.allMatches(text.toLowerCase())) {
+    final suffix = match.group(1)!;
+    for (final letter in letters.split('')) {
+      if (corpus.contains('$letter$suffix')) {
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 String normalizeAiText(String value, {required int maxLength}) {

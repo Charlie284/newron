@@ -356,7 +356,7 @@ test('brief timeouts become a labeled source-only fallback', async () => {
   });
 });
 
-test('non-brief timeout failures are converted to a stable 504 response', async () => {
+test('fact-check timeouts become a labeled source-only result', async () => {
   await withMockFetch(async () => {
     const error = new Error('timed out');
     error.name = 'TimeoutError';
@@ -378,9 +378,75 @@ test('non-brief timeout failures are converted to a stable 504 response', async 
       }),
     });
 
-    assert.equal(response.status, 504);
-    assert.deepEqual(await response.json(), {
-      error: 'The upstream service timed out',
-    });
+    assert.equal(response.status, 200);
+    const payload = await response.json();
+    assert.equal(payload.generated_by, 'source_fallback');
+    assert.deepEqual(payload.source_ids, [article.id]);
   });
+});
+
+test('fact-check provider failures become a labeled source-only result', async () => {
+  await withMockFetch(async () => new Response('provider failed', {status: 502}), async () => {
+    const response = await onRequest({
+      env: {NEWRON_UPSTREAM_API_BASE_URL: 'https://upstream.example/v1'},
+      params: {path: ['fact-check']},
+      request: new Request('https://newron.example/api/fact-check', {
+        method: 'POST',
+        headers: {'content-type': 'application/json'},
+        body: JSON.stringify({
+          model: 'provider/model:free',
+          topic: 'Technology',
+          brief: 'A sufficiently detailed displayed brief grounded in reporting.',
+          citation_ids: [article.id],
+          articles: [article],
+        }),
+      }),
+    });
+
+    assert.equal(response.status, 200);
+    const payload = await response.json();
+    assert.equal(payload.generated_by, 'source_fallback');
+    assert.deepEqual(payload.source_ids, [article.id]);
+    assert.match(payload.summary, /Automated comparison was unavailable/);
+  });
+});
+
+test('focus timeouts become a labeled source-only result', async () => {
+  await withMockFetch(async () => {
+    const error = new Error('timed out');
+    error.name = 'TimeoutError';
+    throw error;
+  }, async () => {
+    const response = await onRequest({
+      env: {NEWRON_UPSTREAM_API_BASE_URL: 'https://upstream.example/v1'},
+      params: {path: ['focus']},
+      request: new Request('https://newron.example/api/focus', {
+        method: 'POST',
+        headers: {'content-type': 'application/json'},
+        body: JSON.stringify({
+          model: 'provider/model:free',
+          question: 'What evidence is supplied?',
+          article,
+        }),
+      }),
+    });
+
+    assert.equal(response.status, 200);
+    const payload = await response.json();
+    assert.equal(payload.generated_by, 'source_fallback');
+    assert.deepEqual(payload.source_ids, [article.id]);
+  });
+});
+
+test('web shell has consistent PWA and social metadata', async () => {
+  const [index, manifestText] = await Promise.all([
+    readFile(new URL('../web/index.html', import.meta.url), 'utf8'),
+    readFile(new URL('../web/manifest.json', import.meta.url), 'utf8'),
+  ]);
+  const manifest = JSON.parse(manifestText);
+  assert.match(index, /<html lang="en-US">/);
+  assert.match(index, /rel="canonical" href="https:\/\/app\.newron\.clh\.lol\/"/);
+  assert.match(index, /property="og:title" content="Newron"/);
+  assert.match(index, /name="twitter:card" content="summary"/);
+  assert.match(index, new RegExp(`name="theme-color" content="${manifest.theme_color}"`, 'i'));
 });

@@ -1,3 +1,5 @@
+import 'dart:ui' show Tristate;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:newron/main.dart';
@@ -28,6 +30,33 @@ void main() {
     expect(worldChip.selected, isTrue);
     expect(repository.calls, ['Top Stories', 'World']);
     expect(find.text('World documented report 1'), findsOneWidget);
+  });
+
+  testWidgets('topics expose mutually exclusive button semantics', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    addTearDown(semantics.dispose);
+    await tester.pumpWidget(
+      NewronApp(
+        repository: FakeNewsRepository(),
+        aiAssistant: FakeAiAssistant(),
+        cache: MemoryDigestCache(),
+        settingsStore: MemorySettingsStore(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final topStories = tester.getSemantics(
+      find.bySemanticsLabel('Top Stories'),
+    );
+    expect(topStories.flagsCollection.isButton, isTrue);
+    expect(topStories.flagsCollection.isSelected, Tristate.isTrue);
+    expect(
+      topStories.flagsCollection.isInMutuallyExclusiveGroup,
+      isTrue,
+    );
+    expect(topStories.flagsCollection.isChecked, Tristate.isFalse);
   });
 
   testWidgets('changing the AI model persists a concrete selection', (
