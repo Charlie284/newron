@@ -3,7 +3,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build:web": "flutter build web --release",
+    "build:web": "flutter build web --release --no-wasm-dry-run && node tool/prune_web_release.mjs",
+    "dev:web": "wrangler pages dev build/web --compatibility-date=2026-07-22",
+    "deploy:web": "wrangler pages deploy build/web",
     "test:web-gateway": "node --test test/web_gateway_test.mjs"
+  },
+  "devDependencies": {
+    "wrangler": "4.113.0"
   }
 }

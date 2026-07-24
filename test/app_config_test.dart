@@ -13,17 +13,14 @@ void main() {
       expect(uri, Uri.parse('https://news.example.com/api/chat/completions'));
     });
 
-    test('keeps native API requests on the hosted worker', () {
+    test('keeps native AI requests on the protected hosted gateway', () {
       final uri = AppConfig.resolveApiUri(
         '/models',
         isWeb: false,
         pageUri: Uri.parse('file:///app/'),
       );
 
-      expect(
-        uri,
-        Uri.parse('https://royal-union-f92a.charlh048.workers.dev/v1/models'),
-      );
+      expect(uri, Uri.parse('https://app.newron.clh.lol/api/models'));
     });
 
     test('honors an explicit API base URL on every platform', () {

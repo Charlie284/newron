@@ -1,75 +1,103 @@
 import 'dart:convert';
-import 'package:flutter_test/flutter_test.dart';
 
-// We want to test the parsing logic from main.dart
-// Since we can't easily import private methods, we'll verify the data structures
-// and how they are handled in the models.
+import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:newron/domain/news_models.dart';
+import 'package:newron/services/ai_assistant.dart';
 
 void main() {
-  group('AI Response Parsing Simulation', () {
-    test('simulates parsing of OpenRouter JSON response for NewsDigest', () {
-      // This is the structure we saw in _fetchDigest
-      final aiJsonContent = jsonEncode({
-        'brief': 'AI Generated Briefing.',
-        'articles': [
-          {
-            'headline': 'Article 1',
-            'leaning_score': 0.5,
-            'leaning_label': 'Right',
-            'leaning_reason': 'Reason 1',
-          },
-        ],
-      });
+  final article = NewsArticle(
+    id: 'article-1234abcd',
+    section: 'Technology',
+    headline: 'A documented technology change',
+    summary: 'The supplied report describes the change and its limits.',
+    source: 'Example News',
+    url: 'https://example.com/report',
+    readTime: '1 min read',
+    publishedAt: DateTime.utc(2026, 7, 23),
+  );
 
-      // Simulation of _decodeModelJson and mapping
-      final decoded = jsonDecode(aiJsonContent) as Map<String, dynamic>;
+  test('parses only grounded brief citations and keyed analyses', () async {
+    late Map<String, dynamic> requestBody;
+    final assistant = HttpAiAssistant(
+      client: MockClient((request) async {
+        expect(request.url.path, '/api/brief');
+        requestBody = jsonDecode(request.body) as Map<String, dynamic>;
+        return http.Response(
+          jsonEncode({
+            'choices': [
+              {
+                'message': {
+                  'content': jsonEncode({
+                    'brief':
+                        '**Documented** change with a clear source-attributed caveat.',
+                    'citation_ids': [article.id, 'article-deadbeef'],
+                    'article_analyses': [
+                      {
+                        'article_id': article.id,
+                        'score': 0.2,
+                        'label': 'Center',
+                        'reason': 'Uses qualified, attributed language.',
+                      },
+                    ],
+                  }),
+                },
+              },
+            ],
+          }),
+          200,
+        );
+      }),
+    );
 
-      expect(decoded['brief'], 'AI Generated Briefing.');
-      expect(decoded['articles'], isA<List>());
+    final result = await assistant.createBrief(
+      topic: 'Technology',
+      model: 'google/test:free',
+      articles: [article],
+    );
 
-      final articleData = decoded['articles'][0];
-      expect(articleData['leaning_score'], 0.5);
-      expect(articleData['leaning_label'], 'Right');
-    });
-
-    test('simulates normalization of AI text responses', () {
-      // Testing the expectation of _normalizeExternalText logic
-      // usually it handles markdown removal or whitespace trimming
-      const rawAiResponse = '  ### Section 1\n\nThis is a summary.  ';
-
-      // Simple simulation of what _normalizeExternalText might do based on the code
-      final normalized = rawAiResponse.replaceAll(RegExp(r'#+\s*'), '').trim();
-
-      expect(normalized, 'Section 1\n\nThis is a summary.');
-    });
+    expect(requestBody.keys, containsAll(['model', 'topic', 'articles']));
+    expect(requestBody, isNot(contains('messages')));
+    expect(
+      result.brief,
+      'Documented change with a clear source-attributed caveat.',
+    );
+    expect(result.citationIds, [article.id]);
+    expect(result.articleAnalyses[article.id]?.label, 'Center');
   });
 
-  group('AI Model Option Mapping', () {
-    test('simulates _modelOptionFromPayload mapping', () {
-      final payload = {'id': 'google/gemma-4-31b-it:free'};
+  test('rejects an AI brief that cites no displayed article', () async {
+    final assistant = HttpAiAssistant(
+      client: MockClient(
+        (_) async => http.Response(
+          jsonEncode({
+            'brief':
+                'This answer is long enough but cites an invented source identifier.',
+            'citation_ids': ['article-deadbeef'],
+          }),
+          200,
+        ),
+      ),
+    );
 
-      // Based on actual implementation in main.dart:
-      final id = (payload['id'] ?? '').toString();
-      final parts = id.split('/');
-      final labelPart = parts.length > 1 ? parts[1] : id;
-      final cleanLabel = labelPart
-          .replaceAll('-it:free', '')
-          .replaceAll(':free', '')
-          .replaceAll('-instruct', '')
-          .replaceAll('-', ' ')
-          .replaceAll('.', ' ')
-          .split(' ')
-          .map(
-            (word) => word.isNotEmpty
-                ? '${word[0].toUpperCase()}${word.substring(1)}'
-                : '',
-          )
-          .join(' ');
+    expect(
+      () => assistant.createBrief(
+        topic: 'Technology',
+        model: 'google/test:free',
+        articles: [article],
+      ),
+      throwsA(isA<AiRequestException>()),
+    );
+  });
 
-      final subtitle = 'Free model via Worker';
-
-      expect(cleanLabel, 'Gemma 4 31b');
-      expect(subtitle, 'Free model via Worker');
-    });
+  test('normalizes markdown control characters from AI text', () {
+    expect(
+      normalizeAiText(
+        '  ### Section\n\n**Summary** with `code`.  ',
+        maxLength: 100,
+      ),
+      'Section\n\nSummary with code.',
+    );
   });
 }

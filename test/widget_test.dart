@@ -1,94 +1,95 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
 import 'package:newron/main.dart';
 
+import 'support/fakes.dart';
+
 void main() {
+  late FakeNewsRepository repository;
+  late FakeAiAssistant assistant;
+
   setUp(() {
-    SharedPreferences.setMockInitialValues({});
+    repository = FakeNewsRepository();
+    assistant = FakeAiAssistant();
   });
 
   Future<void> pumpApp(WidgetTester tester) async {
-    await tester.pumpWidget(const NewronApp());
-    await tester.pump();
+    await tester.pumpWidget(
+      NewronApp(
+        repository: repository,
+        aiAssistant: assistant,
+        cache: MemoryDigestCache(),
+        settingsStore: MemorySettingsStore(),
+      ),
+    );
+    await tester.pumpAndSettle();
   }
 
-  group('NewronApp', () {
-    testWidgets('renders the core briefing shell', (WidgetTester tester) async {
-      await pumpApp(tester);
+  testWidgets('renders linked coverage without running AI on startup', (
+    tester,
+  ) async {
+    await pumpApp(tester);
 
-      expect(find.text('NEWRON'), findsOneWidget);
-      expect(find.text('Top Stories'), findsAtLeastNWidgets(2));
-      expect(find.text('Top Stories • Center'), findsNothing);
-      expect(find.textContaining('Bias slider:'), findsNothing);
-      expect(find.byType(ChoiceChip), findsAtLeastNWidgets(5));
-      expect(find.text('World'), findsOneWidget);
-      expect(find.text('Politics'), findsOneWidget);
-      expect(find.text('Technology'), findsOneWidget);
-      expect(find.byIcon(Icons.settings_outlined), findsOneWidget);
-      expect(find.byIcon(Icons.refresh_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.light_mode_rounded), findsOneWidget);
-      expect(
-        find.text(
-          'Live sources could not be reached. Check the connection and refresh again.',
-        ),
-        findsOneWidget,
-      );
-    });
+    expect(find.text('NEWRON'), findsOneWidget);
+    expect(find.text('Coverage'), findsOneWidget);
+    expect(find.text('Generate AI brief'), findsOneWidget);
+    expect(find.text('Read original'), findsNWidgets(6));
+    expect(find.text('Explore'), findsNWidgets(6));
+    expect(assistant.createBriefCalls, 0);
+  });
 
-    testWidgets('shows summary action controls in the loading state', (
-      WidgetTester tester,
-    ) async {
-      await pumpApp(tester);
+  testWidgets('header controls have names and minimum touch targets', (
+    tester,
+  ) async {
+    await pumpApp(tester);
 
-      final sourcesButton = tester.widget<TextButton>(
-        find.widgetWithText(TextButton, 'Sources'),
-      );
-      final factCheckButton = tester.widget<TextButton>(
-        find.widgetWithText(TextButton, 'Fact check'),
-      );
+    for (final tooltip in ['Refresh coverage', 'Open settings']) {
+      final finder = find.byTooltip(tooltip);
+      expect(finder, findsOneWidget);
+      final size = tester.getSize(finder);
+      expect(size.width, greaterThanOrEqualTo(48));
+      expect(size.height, greaterThanOrEqualTo(48));
+    }
+  });
 
-      expect(sourcesButton.onPressed, isNull);
-      expect(factCheckButton.onPressed, isNull);
-    });
+  testWidgets('AI brief is explicit, grounded, and fact-checkable', (
+    tester,
+  ) async {
+    await pumpApp(tester);
 
-    testWidgets('opens the full settings sheet', (WidgetTester tester) async {
-      await pumpApp(tester);
+    await tester.tap(find.text('Generate AI brief'));
+    await tester.pumpAndSettle();
 
-      await tester.tap(find.byIcon(Icons.settings_outlined));
-      await tester.pumpAndSettle();
+    expect(assistant.createBriefCalls, 1);
+    expect(find.text('Regenerate AI brief'), findsOneWidget);
+    expect(find.text('Cited reporting'), findsOneWidget);
+    expect(
+      find.textContaining('AI synthesis from the linked articles'),
+      findsOneWidget,
+    );
 
-      expect(find.text('Settings'), findsOneWidget);
-      expect(find.text('Appearance'), findsOneWidget);
-      expect(find.text('Briefing'), findsOneWidget);
-      expect(find.text('AI model'), findsOneWidget);
-      expect(find.text('Bias lens'), findsOneWidget);
-      expect(find.text('Center'), findsWidgets);
-      expect(find.text('Refresh now'), findsOneWidget);
-      expect(find.byIcon(Icons.sync_rounded), findsOneWidget);
-      expect(find.widgetWithText(FilledButton, 'Light'), findsOneWidget);
+    await tester.tap(find.text('Fact check'));
+    await tester.pumpAndSettle();
 
-      await tester.drag(find.byType(ListView).last, const Offset(0, -700));
-      await tester.pumpAndSettle();
+    expect(assistant.factCheckCalls, 1);
+    expect(
+      find.textContaining('supported by the cited supplied report'),
+      findsOneWidget,
+    );
+  });
 
-      expect(find.text('Data'), findsOneWidget);
-      expect(find.text('About'), findsOneWidget);
-      expect(find.text('Clear local cache'), findsOneWidget);
-    });
+  testWidgets('compact width keeps settings and model control usable', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(320, 700));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await pumpApp(tester);
 
-    testWidgets('theme toggle updates the header icon', (
-      WidgetTester tester,
-    ) async {
-      await pumpApp(tester);
+    await tester.tap(find.byTooltip('Open settings'));
+    await tester.pumpAndSettle();
 
-      expect(find.byIcon(Icons.light_mode_rounded), findsOneWidget);
-
-      await tester.tap(find.byIcon(Icons.light_mode_rounded));
-      await tester.pumpAndSettle();
-
-      expect(find.byIcon(Icons.dark_mode_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.light_mode_rounded), findsNothing);
-    });
+    expect(find.text('Settings'), findsOneWidget);
+    expect(find.text('Model used for opt-in analysis'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 }

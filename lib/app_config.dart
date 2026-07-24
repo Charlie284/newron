@@ -1,13 +1,12 @@
 import 'package:flutter/foundation.dart';
 
 /// Resolves API endpoints without exposing browser requests to cross-origin
-/// restrictions. Native builds keep using the hosted Worker directly, while
-/// web builds use the same-origin `/api` gateway shipped with this project.
+/// restrictions. Native builds use the hosted Newron task gateway, while web
+/// builds use the same-origin `/api` gateway shipped with this project.
 class AppConfig {
   const AppConfig._();
 
-  static const String _defaultUpstreamApiBaseUrl =
-      'https://royal-union-f92a.charlh048.workers.dev/v1';
+  static const String _defaultGatewayBaseUrl = 'https://app.newron.clh.lol/api';
   static const String _configuredApiBaseUrl = String.fromEnvironment(
     'NEWRON_API_BASE_URL',
   );
@@ -51,6 +50,6 @@ class AppConfig {
       return origin.resolve('api/$cleanPath');
     }
 
-    return Uri.parse('$_defaultUpstreamApiBaseUrl/').resolve(cleanPath);
+    return Uri.parse('$_defaultGatewayBaseUrl/').resolve(cleanPath);
   }
 }

@@ -1,16 +1,19 @@
-import { motion, useScroll, useMotionValueEvent } from "framer-motion";
-import { useState, useEffect } from "react";
-import { Newspaper, Globe, Cpu, Layers, Moon, Sun } from "lucide-react";
-import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
-
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
+import { useEffect, useState } from "react";
+import {
+  BookOpenCheck,
+  Bot,
+  ExternalLink,
+  Globe2,
+  Moon,
+  Newspaper,
+  ShieldCheck,
+  Sun,
+  type LucideIcon,
+} from "lucide-react";
 
 const GitHubIcon = ({ className }: { className?: string }) => (
   <svg
-    role="img"
+    aria-hidden="true"
     viewBox="0 0 24 24"
     xmlns="http://www.w3.org/2000/svg"
     className={className}
@@ -20,413 +23,220 @@ const GitHubIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
-const Navbar = ({
-  theme,
-  toggleTheme,
-}: {
-  theme: string;
-  toggleTheme: () => void;
-}) => {
-  const { scrollY } = useScroll();
-  const [hidden, setHidden] = useState(false);
-
-  useMotionValueEvent(scrollY, "change", (latest) => {
-    const previous = scrollY.getPrevious() ?? 0;
-    if (latest > previous && latest > 150) {
-      setHidden(true);
-    } else {
-      setHidden(false);
-    }
-  });
-
-  return (
-    <motion.div
-      variants={{
-        visible: { y: 0 },
-        hidden: { y: -120 },
-      }}
-      animate={hidden ? "hidden" : "visible"}
-      transition={{ duration: 0.35, ease: "easeInOut" }}
-      className="fixed top-6 md:top-8 left-0 right-0 z-50 flex justify-center px-4 md:px-6"
-    >
-      <nav className="flex items-center gap-2 md:gap-4 px-4 md:px-6 py-2.5 md:py-3 glass rounded-full shadow-2xl border border-muted/20 w-full md:w-auto max-w-full">
-        <div className="flex items-center gap-2 md:gap-3 px-2 md:px-4 mr-1 md:mr-2 border-r border-muted/20">
-          <img
-            src="/app_icon.png"
-            alt="Newron Logo"
-            className="w-6 h-6 md:w-10 md:h-10 rounded-lg shadow-lg"
-          />
-          <span className="text-sm md:text-xl font-black tracking-tighter uppercase text-foreground">
-            Newron
-          </span>
-        </div>
-
-        <div className="flex items-center gap-1 md:gap-2">
-          {["Mission", "Models", "Features"].map((item) => (
-            <a
-              key={item}
-              href={`#${item.toLowerCase()}`}
-              className="px-2 md:px-6 py-2 md:py-3 text-[10px] md:text-sm font-bold text-muted hover:text-foreground rounded-full transition-all"
-            >
-              {item}
-            </a>
-          ))}
-        </div>
-
-        <div className="flex items-center gap-2 md:gap-3 ml-1 md:ml-2 pl-2 md:pl-4 border-l border-muted/20">
-          <button
-            onClick={toggleTheme}
-            className="p-1.5 md:p-2.5 text-muted hover:text-foreground rounded-full transition-colors hover:bg-black/5 dark:hover:bg-white/5"
-          >
-            {theme === "dark" ? (
-              <Sun className="w-4 h-4 md:w-6 md:h-6" />
-            ) : (
-              <Moon className="w-4 h-4 md:w-6 md:h-6" />
-            )}
-          </button>
-          <a
-            href="https://github.com/Charlie284/newron"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-4 md:px-8 py-2 md:py-3 bg-[#c15f3c] text-white text-[10px] md:text-[13px] font-black rounded-full hover:bg-[#a14f32] transition-all uppercase tracking-[0.1em] shadow-xl shadow-[#c15f3c]/40 active:scale-95 flex items-center gap-2"
-          >
-            <GitHubIcon className="w-3 h-3 md:w-4 md:h-4" />
-            <span className="hidden sm:inline">GitHub</span>
-          </a>
-        </div>
-      </nav>
-    </motion.div>
-  );
+type FeatureProps = {
+  icon: LucideIcon;
+  title: string;
+  description: string;
 };
 
-const FeatureCard = ({
-  title,
-  description,
-  icon: Icon,
-  className,
-  delay = 0,
-}: any) => (
-  <motion.div
-    initial={{ opacity: 0, y: 20 }}
-    whileInView={{ opacity: 1, y: 0 }}
-    viewport={{ once: true }}
-    transition={{ duration: 0.5, delay }}
-    className={cn(
-      "p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] glass flex flex-col gap-4 md:gap-6 relative overflow-hidden group hover:shadow-2xl transition-all duration-500",
-      className,
-    )}
-  >
-    <div className="absolute inset-0 bg-gradient-to-br from-[#c15f3c]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+function Feature({ icon: Icon, title, description }: FeatureProps) {
+  return (
+    <article className="feature">
+      <Icon aria-hidden="true" />
+      <h3>{title}</h3>
+      <p>{description}</p>
+    </article>
+  );
+}
 
-    <div className="relative z-10">
-      <div className="w-12 h-10 md:w-16 md:h-14 rounded-xl md:rounded-2xl bg-[#c15f3c]/10 flex items-center justify-center mb-4 md:mb-6">
-        <Icon className="w-6 h-6 md:w-8 md:h-8 text-[#c15f3c]" />
-      </div>
-      <h3 className="text-xl md:text-3xl font-black tracking-tighter uppercase mb-2">
-        {title}
-      </h3>
-      <p className="text-muted text-sm md:text-lg leading-relaxed font-medium">
-        {description}
-      </p>
-    </div>
-  </motion.div>
-);
-
-const App = () => {
-  const [theme, setTheme] = useState(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("theme") || "dark";
-    }
-    return "dark";
+function App() {
+  const [dark, setDark] = useState(() => {
+    const stored = window.localStorage.getItem("newron-theme");
+    return stored
+      ? stored === "dark"
+      : window.matchMedia("(prefers-color-scheme: dark)").matches;
   });
 
   useEffect(() => {
-    const root = window.document.documentElement;
-    if (theme === "dark") {
-      root.classList.add("dark");
-    } else {
-      root.classList.remove("dark");
-    }
-    localStorage.setItem("theme", theme);
-  }, [theme]);
-
-  const toggleTheme = () => {
-    setTheme(theme === "light" ? "dark" : "light");
-  };
+    document.documentElement.classList.toggle("dark", dark);
+    window.localStorage.setItem("newron-theme", dark ? "dark" : "light");
+  }, [dark]);
 
   return (
-    <div className="min-h-screen transition-colors duration-700 relative selection:bg-[#c15f3c]/30 selection:text-[#c15f3c] overflow-x-hidden">
-      <div className="fixed inset-0 grid-bg pointer-events-none" />
-      <Navbar theme={theme} toggleTheme={toggleTheme} />
-
-      {/* Hero Section */}
-      <section className="relative pt-32 md:pt-64 pb-24 md:pb-48 px-6 md:px-12 overflow-hidden flex items-center min-h-[100vh]">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1400px] h-[1000px] glow-warm blur-[160px] rounded-full -z-10" />
-
-        <div className="max-w-[1700px] mx-auto grid grid-cols-1 lg:grid-cols-[55%_45%] gap-12 lg:gap-0 items-center relative z-10 w-full">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9, x: -50 }}
-            animate={{ opacity: 1, scale: 1, x: 0 }}
-            transition={{ delay: 0.3, duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
-            className="relative flex justify-center lg:justify-start lg:-ml-20 order-2 lg:order-1"
-          >
-            <div className="absolute -inset-20 glow-warm blur-[180px] rounded-full opacity-40 animate-pulse" />
-            <motion.img
-              animate={{ y: [0, -20, 0] }}
-              transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-              src="/iphone_mockup.png"
-              alt="Newron App"
-              className="relative z-10 max-w-full lg:max-w-[1100px] drop-shadow-[40px_80px_120px_rgba(0,0,0,0.4)] dark:drop-shadow-[40px_80px_120px_rgba(0,0,0,0.7)] h-auto"
-            />
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, x: 50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 1 }}
-            className="text-left flex flex-col items-center lg:items-start lg:pl-10 order-1 lg:order-2"
-          >
-            <div className="mb-6 md:mb-10 group cursor-default text-center lg:text-left">
-              <h1 className="text-6xl md:text-[100px] lg:text-[160px] font-black tracking-tighter leading-[0.6] uppercase text-foreground opacity-30 dark:opacity-20 transition-all duration-700 group-hover:opacity-40">
-                See The
-              </h1>
-              <h1 className="text-7xl md:text-[120px] lg:text-[180px] font-black tracking-tighter leading-[0.7] uppercase text-[#c15f3c] drop-shadow-2xl">
-                Gaps.
-              </h1>
-            </div>
-
-            <p className="text-xl md:text-2xl lg:text-4xl text-muted dark:text-foreground/90 max-w-2xl mb-10 md:mb-16 leading-[1.3] font-bold tracking-tight text-center lg:text-left">
-              A personal news engine I built to escape the ads and see the
-              reporting behind the headlines.{" "}
-              <span className="text-[#c15f3c]">Free and Open Source.</span>
-            </p>
-
-            <div className="bg-black/20 dark:bg-black/40 backdrop-blur-3xl p-4 md:p-6 rounded-[2.5rem] md:rounded-[3.5rem] shadow-2xl inline-flex items-center gap-4 border border-white/5">
-              <div className="flex flex-wrap justify-center items-center gap-3 md:gap-4">
-                <a
-                  href="https://github.com/Charlie284/newron"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 md:gap-4 bg-[#c15f3c] text-white px-6 md:px-10 py-4 md:py-5 rounded-[1.5rem] md:rounded-[2rem] hover:scale-105 transition-all duration-300 shadow-2xl shadow-[#c15f3c]/40 active:scale-95"
-                >
-                  <GitHubIcon className="w-6 h-6 md:w-8 md:h-8" />
-                  <div className="text-left">
-                    <p className="text-[8px] md:text-[10px] uppercase font-black opacity-70 tracking-widest leading-none mb-1">
-                      Checkout
-                    </p>
-                    <p className="text-xl md:text-3xl font-black leading-none">
-                      Repo
-                    </p>
-                  </div>
-                </a>
-
-                <a
-                  href="http://app.newron.clh.lol/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 md:gap-4 bg-white/5 dark:bg-white/[0.03] text-foreground px-6 md:px-10 py-4 md:py-5 rounded-[1.5rem] md:rounded-[2rem] hover:bg-white/10 transition-all duration-300 border border-white/10 active:scale-95"
-                >
-                  <div className="text-left">
-                    <p className="text-[8px] md:text-[10px] uppercase font-black opacity-70 tracking-widest leading-none mb-1">
-                      Open
-                    </p>
-                    <p className="text-xl md:text-3xl font-black leading-none text-nowrap">
-                      Web App
-                    </p>
-                  </div>
-                </a>
-              </div>
-            </div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Why we built it */}
-      <section
-        id="mission"
-        className="py-32 md:py-64 px-6 md:px-12 relative overflow-hidden"
-      >
-        <div className="max-w-[1400px] mx-auto text-center relative z-10">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 1 }}
-          >
-            <h2 className="text-xs md:text-sm font-black uppercase tracking-[0.4em] text-[#c15f3c] mb-8 md:mb-12">
-              The Mission
-            </h2>
-            <h3 className="text-3xl md:text-7xl font-black tracking-tighter uppercase leading-[0.95] mb-10 md:16 text-foreground">
-              Built because I <br />{" "}
-              <span className="opacity-40">didn't have the time.</span>
-            </h3>
-            <div className="max-w-4xl mx-auto space-y-6 md:space-y-10">
-              <p className="text-lg md:text-4xl text-muted font-bold leading-tight tracking-tight">
-                Hi, I'm Charlie. I wanted my daily news brief without the
-                constant ads, trackers, and the "doom-scroll" distractions of
-                modern apps.
-              </p>
-
-              <p className="text-lg md:text-4xl text-foreground font-black leading-tight tracking-tight">
-                So we built an aggregator that respects your time researching
-                the gaps so you don't have to.
-              </p>
-            </div>
-          </motion.div>
-        </div>
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full glow-warm blur-[160px] opacity-20 -z-10" />
-      </section>
-
-      {/* Scrolling Models Marquee */}
-      <section
-        id="models"
-        className="py-16 md:py-24 border-y border-muted/10 bg-black/5 dark:bg-white/[0.02] overflow-hidden"
-      >
-        <div className="max-w-7xl mx-auto px-6 md:px-12 mb-8 md:mb-12">
-          <p className="text-center text-[10px] md:text-[11px] font-black tracking-[0.3em] uppercase text-muted">
-            Choose your intelligence
-          </p>
-        </div>
-
-        <div className="flex relative items-center">
-          <motion.div
-            animate={{ x: ["0%", "-50%"] }}
-            transition={{ duration: 40, repeat: Infinity, ease: "linear" }}
-            className="flex gap-8 md:gap-12 items-center whitespace-nowrap min-w-max"
-          >
-            {[
-              "OpenRouter",
-              "Gemma 4 31B",
-              "Nemotron",
-              "MiniMax",
-              "Llama 3",
-              "Mistral Large",
-              "GPT-4o",
-              "Claude 3.5",
-              "Gemini Pro",
-              "OpenRouter",
-              "Gemma 4 31B",
-              "Nemotron",
-              "MiniMax",
-              "Llama 3",
-              "Mistral Large",
-              "GPT-4o",
-              "Claude 3.5",
-              "Gemini Pro",
-            ].map((model, i) => (
-              <div
-                key={i}
-                className="px-6 py-3 md:px-10 md:py-4 rounded-2xl md:rounded-3xl glass border border-muted/10 text-lg md:text-2xl font-black tracking-tighter uppercase text-muted/60 hover:text-foreground hover:scale-105 transition-all cursor-default"
-              >
-                {model}
-              </div>
-            ))}
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Features */}
-      <section
-        id="features"
-        className="py-32 md:py-64 px-6 md:px-12 relative z-10"
-      >
-        <div id="sources" className="absolute top-0 left-0" />
-        <div className="max-w-[1700px] mx-auto">
-          <div className="text-left mb-24 md:mb-40">
-            <h2 className="text-4xl md:text-[10rem] font-black mb-6 md:10 tracking-tighter uppercase leading-[0.8] text-foreground">
-              How it <br /> <span className="text-[#c15f3c]">Works.</span>
-            </h2>
-            <p className="text-xl md:text-3xl max-w-4xl font-bold leading-relaxed tracking-tight text-muted">
-              Newron maps the reporting gaps and visualizes the lean of every
-              headline. You get the full picture and the underlying perspective
-              without the noise.
-            </p>
+    <>
+      <a className="skip-link" href="#main">
+        Skip to main content
+      </a>
+      <header className="site-header">
+        <nav aria-label="Primary navigation" className="nav-shell">
+          <a href="#top" className="brand" aria-label="Newron home">
+            <img src="/app_icon.png" width="40" height="40" alt="" />
+            <span>Newron</span>
+          </a>
+          <div className="nav-links">
+            <a href="#approach">Approach</a>
+            <a href="#features">Features</a>
+            <a href="#privacy">Privacy</a>
           </div>
+          <button
+            type="button"
+            className="icon-button"
+            onClick={() => setDark((value) => !value)}
+            aria-label={dark ? "Use light theme" : "Use dark theme"}
+            title={dark ? "Use light theme" : "Use dark theme"}
+          >
+            {dark ? <Sun aria-hidden="true" /> : <Moon aria-hidden="true" />}
+          </button>
+          <a
+            className="nav-github"
+            href="https://github.com/Charlie284/newron"
+            target="_blank"
+            rel="noreferrer"
+          >
+            <GitHubIcon className="github-icon" />
+            <span>Source</span>
+          </a>
+        </nav>
+      </header>
 
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-12">
-            <FeatureCard
-              className="md:col-span-4"
-              icon={Globe}
-              title="70+ Sources"
-              description="Direct access to global news organizations via high-speed encrypted RSS protocols."
-              delay={0.2}
-            />
-
-            <FeatureCard
-              className="md:col-span-4"
-              icon={Layers}
-              title="Absolute Privacy"
-              description="Zero algorithms, zero tracking. Your research and data remain strictly in your control."
-              delay={0.3}
-            />
-
-            <FeatureCard
-              className="md:col-span-4"
-              icon={Cpu}
-              title="Built with Flutter"
-              description="Native performance on every screen. Newron runs seamlessly on Android, iOS, Web, and Desktop."
-              delay={0.4}
-            />
-
-            <FeatureCard
-              className="md:col-span-12 mt-6 md:mt-12"
-              icon={Newspaper}
-              title="Source Protocol"
-              description="Consolidated from global news organizations, independent journals, and niche tech publications for a truly broad perspective."
-              delay={0.4}
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="border-t border-muted/20 py-24 md:py-48 px-6 md:px-12 relative z-10 bg-black/5 dark:bg-white/[0.02]">
-        <div className="max-w-[1700px] mx-auto flex flex-col md:flex-row justify-between items-start gap-24 md:gap-40">
-          <div className="flex flex-col gap-8 md:gap-12 max-w-lg">
-            <div className="flex items-center gap-3">
-              <img
-                src="/app_icon.png"
-                alt="Newron"
-                className="w-10 h-10 md:w-16 md:h-16 rounded-2xl shadow-2xl"
-              />
-              <span className="text-3xl md:text-5xl font-black tracking-tighter uppercase text-foreground">
-                Newron
-              </span>
-            </div>
-            <p className="text-lg md:text-2xl leading-relaxed font-bold tracking-tight text-muted">
-              Redefining news aggregation with open intelligence. <br />
-              Created by{" "}
+      <main id="main">
+        <section id="top" className="hero">
+          <div className="hero-copy">
+            <p className="kicker">Open-source news reader</p>
+            <h1>See the reporting. Ask for synthesis.</h1>
+            <p className="hero-lede">
+              Newron ranks timestamped stories from a catalog of 70+ RSS feeds,
+              links every original, and keeps AI off until you explicitly ask
+              for a source-grounded brief.
+            </p>
+            <div className="hero-actions">
               <a
-                href="https://clh.lol"
+                className="primary-action"
+                href="https://app.newron.clh.lol/"
                 target="_blank"
-                rel="noopener noreferrer"
-                className="text-[#c15f3c] hover:underline"
+                rel="noreferrer"
               >
-                Charlie
+                Open web app <ExternalLink aria-hidden="true" />
               </a>
-              .
-            </p>
-            <div className="flex items-center gap-8 md:gap-12 text-muted/60">
               <a
+                className="secondary-action"
                 href="https://github.com/Charlie284/newron"
                 target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-foreground transition-all scale-125 md:scale-[1.75]"
+                rel="noreferrer"
               >
-                <GitHubIcon className="w-8 h-8" />
+                View source <GitHubIcon className="github-icon" />
               </a>
-              <Globe className="w-8 h-8 hover:text-foreground cursor-pointer transition-all scale-125 md:scale-[1.75]" />
             </div>
+            <p className="hero-note">
+              AI output can be wrong. Newron shows its cited inputs so you can
+              verify important claims in the original reporting.
+            </p>
           </div>
-        </div>
-        <div className="max-w-[1700px] mx-auto mt-24 md:mt-64 pt-12 border-t border-muted/20">
-          <p className="text-muted/40 text-xs font-black uppercase tracking-[0.5em]">
-            © 2026 Newron. MIT Licensed.
+          <div className="hero-visual">
+            <div className="visual-backdrop" aria-hidden="true" />
+            <img
+              src="/iphone_mockup.webp"
+              width="1600"
+              height="1200"
+              fetchPriority="high"
+              alt="Newron reader showing a briefing beside linked source coverage"
+            />
+          </div>
+        </section>
+
+        <section id="approach" className="statement section-shell">
+          <p className="kicker">Built for verification</p>
+          <h2>A reader first. An AI tool second.</h2>
+          <p>
+            Each refresh contacts a bounded set of feeds, parses publication
+            dates, removes duplicates, and balances publishers before showing
+            coverage. You can read every original without generating an AI
+            request.
           </p>
+        </section>
+
+        <section id="features" className="features-section section-shell">
+          <div className="section-heading">
+            <p className="kicker">What it does</p>
+            <h2>Useful defaults, visible limits.</h2>
+          </div>
+          <div className="feature-grid">
+            <Feature
+              icon={Globe2}
+              title="Broad source catalog"
+              description="A 70+ feed catalog spans global, local, business, science, technology, policy, health, and sports reporting. A refresh selects at most 12 feeds."
+            />
+            <Feature
+              icon={Newspaper}
+              title="Dated, linked coverage"
+              description="Stories are ranked by supplied publication time, de-duplicated, diversified by publisher, and always link back to an HTTPS original."
+            />
+            <Feature
+              icon={Bot}
+              title="Opt-in AI synthesis"
+              description="AI runs only after you choose it. The gateway accepts fixed briefing tasks, excludes web search, and requires citations to displayed article IDs."
+            />
+            <Feature
+              icon={BookOpenCheck}
+              title="Fact-check context"
+              description="The fact-check view compares the displayed AI brief with the same supplied reporting and clearly states that this is not independent proof."
+            />
+          </div>
+        </section>
+
+        <section id="privacy" className="privacy-section section-shell">
+          <div>
+            <ShieldCheck aria-hidden="true" className="privacy-icon" />
+            <p className="kicker">Privacy, stated precisely</p>
+            <h2>No account. No startup AI call.</h2>
+          </div>
+          <div className="privacy-copy">
+            <p>
+              Briefings are cached on your device. When you choose an AI
+              action, Newron sends the displayed article metadata and your task
+              to its gateway and selected model provider. The marketing site
+              includes no analytics or advertising scripts.
+            </p>
+            <p>
+              The code is MIT licensed, so these claims can be inspected rather
+              than taken on faith.
+            </p>
+          </div>
+        </section>
+
+        <section className="cta section-shell">
+          <div>
+            <p className="kicker">Flutter, in the open</p>
+            <h2>Inspect it. Run it. Improve it.</h2>
+          </div>
+          <a
+            className="primary-action"
+            href="https://github.com/Charlie284/newron"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Browse the repository <ExternalLink aria-hidden="true" />
+          </a>
+        </section>
+      </main>
+
+      <footer className="site-footer section-shell">
+        <div className="brand footer-brand">
+          <img src="/app_icon.png" width="40" height="40" alt="" />
+          <span>Newron</span>
+        </div>
+        <p>Created by Charlie Harper · MIT licensed · © 2026</p>
+        <div className="footer-links">
+          <a
+            href="https://github.com/Charlie284/newron"
+            target="_blank"
+            rel="noreferrer"
+            aria-label="Newron source code on GitHub"
+          >
+            <GitHubIcon className="github-icon" />
+          </a>
+          <a
+            href="https://app.newron.clh.lol/"
+            target="_blank"
+            rel="noreferrer"
+            aria-label="Open the Newron web app"
+          >
+            <Globe2 aria-hidden="true" />
+          </a>
         </div>
       </footer>
-    </div>
+    </>
   );
-};
+}
 
 export default App;

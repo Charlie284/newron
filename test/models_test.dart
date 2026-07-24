@@ -6,13 +6,14 @@ void main() {
   group('NewsArticle', () {
     test('fromJson and toJson should be consistent', () {
       final article = NewsArticle(
+        id: 'article-12345678',
         section: 'Technology',
         headline: 'Newron App Launched',
         summary: 'A new AI news app is now available.',
-        articleBody: 'Detailed body of the article...',
         source: 'Tech Daily',
         url: 'https://example.com/newron',
         readTime: '3 min read',
+        publishedAt: DateTime.utc(2026, 4, 26, 9),
         accent: Colors.blue,
         leaningScore: 0.1,
         leaningLabel: 'Center',
@@ -26,6 +27,7 @@ void main() {
       expect(fromJson.section, article.section);
       expect(fromJson.accent.toARGB32(), article.accent.toARGB32());
       expect(fromJson.leaningScore, article.leaningScore);
+      expect(fromJson.publishedAt, article.publishedAt);
     });
 
     test('fromJson should handle null or missing values gracefully', () {
@@ -33,7 +35,7 @@ void main() {
       final article = NewsArticle.fromJson(json);
 
       expect(article.headline, '');
-      expect(article.leaningLabel, 'Center');
+      expect(article.leaningLabel, 'Not analyzed');
       expect(article.leaningScore, 0.0);
     });
   });
@@ -41,13 +43,14 @@ void main() {
   group('NewsDigest', () {
     test('fromJson and toJson should be consistent', () {
       final article = NewsArticle(
+        id: 'article-abcdef12',
         section: 'Politics',
         headline: 'Election Results',
         summary: 'Results are in.',
-        articleBody: 'Body...',
         source: 'News Network',
         url: 'https://example.com/news',
         readTime: '5 min',
+        publishedAt: DateTime.utc(2026, 4, 26, 8),
         accent: Colors.red,
         leaningScore: -0.5,
         leaningLabel: 'Left',
@@ -58,8 +61,9 @@ void main() {
         brief: 'Morning Briefing',
         articles: [article],
         usedModelInference: true,
-        updatedAt: DateTime(2026, 4, 26, 10, 0),
-        topicSummaries: {'Politics': 'Summary of politics'},
+        updatedAt: DateTime.utc(2026, 4, 26, 10, 0),
+        topic: 'Politics',
+        briefCitationIds: const ['article-abcdef12'],
       );
 
       final json = digest.toJson();
@@ -69,7 +73,8 @@ void main() {
       expect(fromJson.articles.length, 1);
       expect(fromJson.articles.first.headline, article.headline);
       expect(fromJson.updatedAt, digest.updatedAt);
-      expect(fromJson.topicSummaries['Politics'], 'Summary of politics');
+      expect(fromJson.topic, 'Politics');
+      expect(fromJson.briefCitationIds, ['article-abcdef12']);
     });
   });
 }

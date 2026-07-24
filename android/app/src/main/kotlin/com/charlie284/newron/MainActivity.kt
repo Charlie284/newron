@@ -1,4 +1,4 @@
-package com.example.newron
+package com.charlie284.newron
 
 import io.flutter.embedding.android.FlutterActivity
 
