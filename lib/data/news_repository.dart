@@ -246,7 +246,23 @@ String sanitizeFeedText(String value, {required int maxCharacters}) {
       )
       .replaceAll(RegExp(r'<style[\s\S]*?</style>', caseSensitive: false), ' ')
       .replaceAll(RegExp(r'<[^>]+>'), ' ')
-      .replaceAll(RegExp(r'&nbsp;?', caseSensitive: false), ' ')
+      .replaceAllMapped(
+        RegExp(r'&#(?:x([0-9a-f]+)|(\d+));?', caseSensitive: false),
+        (match) {
+          final codePoint = match.group(1) != null
+              ? int.tryParse(match.group(1)!, radix: 16)
+              : int.tryParse(match.group(2)!);
+          return codePoint != null && codePoint > 0 && codePoint <= 0x10ffff
+              ? String.fromCharCode(codePoint)
+              : ' ';
+        },
+      )
+      .replaceAllMapped(
+        RegExp(r'&([a-z]+);?', caseSensitive: false),
+        (match) =>
+            _namedHtmlEntities[match.group(1)!.toLowerCase()] ??
+            match.group(0)!,
+      )
       .replaceAll(RegExp(r'\s+'), ' ')
       .trim();
   if (normalized.length > maxCharacters) {
@@ -254,6 +270,22 @@ String sanitizeFeedText(String value, {required int maxCharacters}) {
   }
   return normalized;
 }
+
+const _namedHtmlEntities = <String, String>{
+  'amp': '&',
+  'apos': "'",
+  'gt': '>',
+  'hellip': '…',
+  'ldquo': '“',
+  'lsquo': '‘',
+  'lt': '<',
+  'mdash': '—',
+  'nbsp': ' ',
+  'ndash': '–',
+  'quot': '"',
+  'rdquo': '”',
+  'rsquo': '’',
+};
 
 DateTime? parseFeedDate(String value) {
   final clean = value.trim();

@@ -1,4 +1,4 @@
-import 'dart:ui' show Tristate;
+import 'dart:ui' show CheckedState, Tristate;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -36,7 +36,6 @@ void main() {
     tester,
   ) async {
     final semantics = tester.ensureSemantics();
-    addTearDown(semantics.dispose);
     await tester.pumpWidget(
       NewronApp(
         repository: FakeNewsRepository(),
@@ -52,11 +51,9 @@ void main() {
     );
     expect(topStories.flagsCollection.isButton, isTrue);
     expect(topStories.flagsCollection.isSelected, Tristate.isTrue);
-    expect(
-      topStories.flagsCollection.isInMutuallyExclusiveGroup,
-      isTrue,
-    );
-    expect(topStories.flagsCollection.isChecked, Tristate.isFalse);
+    expect(topStories.flagsCollection.isInMutuallyExclusiveGroup, isTrue);
+    expect(topStories.flagsCollection.isChecked, CheckedState.none);
+    semantics.dispose();
   });
 
   testWidgets('changing the AI model persists a concrete selection', (

@@ -192,7 +192,6 @@ const rssSources = <RssSource>[
     name: 'Washington Post World',
     feedUrl: 'https://feeds.washingtonpost.com/rss/world',
     topic: 'World',
-    featured: true,
   ),
   RssSource(
     name: 'BBC World',
@@ -241,18 +240,17 @@ const rssSources = <RssSource>[
     name: 'Scientific American',
     feedUrl: 'https://rss.sciam.com/ScientificAmerican-Global',
     topic: 'Science',
-    featured: true,
   ),
   RssSource(
     name: 'ScienceDaily',
     feedUrl: 'https://www.sciencedaily.com/rss/all.xml',
     topic: 'Science',
+    featured: true,
   ),
   RssSource(
     name: 'Nature',
     feedUrl: 'https://www.nature.com/nature.rss',
     topic: 'Science',
-    featured: true,
   ),
   RssSource(
     name: 'Phys.org',

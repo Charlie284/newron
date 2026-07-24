@@ -6,6 +6,19 @@ import 'package:newron/domain/news_models.dart';
 import 'package:newron/domain/news_ranking.dart';
 
 void main() {
+  test(
+    'top stories avoids feeds that repeatedly fail the live health check',
+    () {
+      final selected = selectSourcesForTopic('Top Stories');
+      final names = selected.map((source) => source.name).toSet();
+
+      expect(names, isNot(contains('Washington Post World')));
+      expect(names, isNot(contains('Scientific American')));
+      expect(names, containsAll(['BBC World', 'ScienceDaily']));
+      expect(selected, hasLength(12));
+    },
+  );
+
   group('feed parsing', () {
     const source = RssSource(
       name: 'Example',
@@ -50,6 +63,21 @@ void main() {
       expect(articles.single.url, 'https://example.com/space');
       expect(articles.single.section, 'Science');
       expect(articles.single.publishedAt, DateTime.utc(2026, 7, 23, 15, 30));
+    });
+
+    test('decodes numeric and named HTML entities in feed text', () {
+      const xml = '''
+        <rss><channel><item>
+          <title>TikTok&amp;#8217;s safeguards &amp;amp; limits</title>
+          <link>https://example.com/entities</link>
+          <description>It&amp;rsquo;s documented&amp;hellip;</description>
+        </item></channel></rss>
+      ''';
+
+      final article = parseFeed(source, xml).single;
+
+      expect(article.headline, 'TikTok’s safeguards & limits');
+      expect(article.summary, 'It’s documented…');
     });
   });
 
