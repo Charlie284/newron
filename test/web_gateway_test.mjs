@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
 import test from 'node:test';
 
-import {onRequest} from '../functions/api/[[path]].js';
+import {allowedRssHosts, onRequest} from '../functions/api/[[path]].js';
 
 const article = {
   id: 'article-1234abcd',
@@ -11,6 +12,18 @@ const article = {
   url: 'https://example.com/report',
   published_at: '2026-07-23T15:00:00Z',
 };
+
+test('RSS proxy allowlist exactly matches the configured HTTPS source catalog', async () => {
+  const catalog = await readFile(
+    new URL('../lib/data/rss_sources.dart', import.meta.url),
+    'utf8',
+  );
+  const urls = [...catalog.matchAll(/feedUrl:\s*'(https:\/\/[^']+)'/g)]
+    .map((match) => new URL(match[1]));
+  assert.ok(urls.length >= 70);
+  const catalogHosts = new Set(urls.map((url) => url.hostname.toLowerCase()));
+  assert.deepEqual([...allowedRssHosts].sort(), [...catalogHosts].sort());
+});
 
 async function withMockFetch(mockFetch, callback) {
   const originalFetch = globalThis.fetch;
@@ -53,8 +66,15 @@ test('brief endpoint builds a fixed evidence-only upstream prompt', async () => 
     assert.equal(body.messages.length, 2);
     assert.match(body.messages[0].content, /Use only the supplied article metadata/);
     assert.match(body.messages[1].content, /article-1234abcd/);
+    assert.deepEqual(body.reasoning, {effort: 'none', exclude: true});
     assert.equal(body.web_search, undefined);
-    return Response.json({choices: [{message: {content: '{}'}}]});
+    return Response.json({
+      choices: [{message: {content: JSON.stringify({
+        brief: 'The supplied reporting documents a claim and names the uncertainty around it.',
+        citation_ids: [article.id],
+        article_analyses: [],
+      })}}],
+    });
   }, async () => {
     const response = await onRequest({
       env: {NEWRON_UPSTREAM_API_BASE_URL: 'https://upstream.example/v1'},
@@ -182,7 +202,12 @@ test('fact check requires the actual displayed brief and citation IDs', async ()
     const body = JSON.parse(init.body);
     assert.match(body.messages[1].content, /Displayed brief grounded in source/);
     assert.match(body.messages[1].content, /article-1234abcd/);
-    return Response.json({choices: [{message: {content: '{}'}}]});
+    return Response.json({
+      choices: [{message: {content: JSON.stringify({
+        summary: 'The displayed briefing is supported by the supplied report.',
+        source_ids: [article.id],
+      })}}],
+    });
   }, async () => {
     const response = await onRequest({
       env: {NEWRON_UPSTREAM_API_BASE_URL: 'https://upstream.example/v1'},
@@ -276,4 +301,86 @@ test('API responses include restrictive security headers', async () => {
   assert.equal(response.headers.get('x-frame-options'), 'DENY');
   assert.match(response.headers.get('content-security-policy'), /default-src 'none'/);
   assert.equal(response.headers.get('referrer-policy'), 'no-referrer');
+});
+
+test('malformed nested model output becomes a labeled source-only fallback', async () => {
+  await withMockFetch(async () => Response.json({
+    choices: [{message: {content: '{"brief": "truncated"'}}],
+  }), async () => {
+    const response = await onRequest({
+      env: {NEWRON_UPSTREAM_API_BASE_URL: 'https://upstream.example/v1'},
+      params: {path: ['brief']},
+      request: new Request('https://newron.example/api/brief', {
+        method: 'POST',
+        headers: {'content-type': 'application/json'},
+        body: JSON.stringify({
+          model: 'provider/model:free',
+          topic: 'Technology',
+          articles: [article],
+        }),
+      }),
+    });
+
+    assert.equal(response.status, 200);
+    const payload = await response.json();
+    assert.equal(payload.generated_by, 'source_fallback');
+    assert.deepEqual(payload.citation_ids, [article.id]);
+    assert.match(payload.brief, /Leading supplied reports/);
+  });
+});
+
+test('brief timeouts become a labeled source-only fallback', async () => {
+  await withMockFetch(async () => {
+    const error = new Error('timed out');
+    error.name = 'TimeoutError';
+    throw error;
+  }, async () => {
+    const response = await onRequest({
+      env: {NEWRON_UPSTREAM_API_BASE_URL: 'https://upstream.example/v1'},
+      params: {path: ['brief']},
+      request: new Request('https://newron.example/api/brief', {
+        method: 'POST',
+        headers: {'content-type': 'application/json'},
+        body: JSON.stringify({
+          model: 'provider/model:free',
+          topic: 'Technology',
+          articles: [article],
+        }),
+      }),
+    });
+
+    assert.equal(response.status, 200);
+    const payload = await response.json();
+    assert.equal(payload.generated_by, 'source_fallback');
+    assert.deepEqual(payload.citation_ids, [article.id]);
+  });
+});
+
+test('non-brief timeout failures are converted to a stable 504 response', async () => {
+  await withMockFetch(async () => {
+    const error = new Error('timed out');
+    error.name = 'TimeoutError';
+    throw error;
+  }, async () => {
+    const response = await onRequest({
+      env: {NEWRON_UPSTREAM_API_BASE_URL: 'https://upstream.example/v1'},
+      params: {path: ['fact-check']},
+      request: new Request('https://newron.example/api/fact-check', {
+        method: 'POST',
+        headers: {'content-type': 'application/json'},
+        body: JSON.stringify({
+          model: 'provider/model:free',
+          topic: 'Technology',
+          brief: 'A sufficiently detailed displayed brief grounded in reporting.',
+          citation_ids: [article.id],
+          articles: [article],
+        }),
+      }),
+    });
+
+    assert.equal(response.status, 504);
+    assert.deepEqual(await response.json(), {
+      error: 'The upstream service timed out',
+    });
+  });
 });

@@ -25,7 +25,7 @@ const newsCategories = <String>[
 ];
 
 /// The full catalog is deliberately broader than the set contacted per load.
-/// Each refresh uses at most 18 feeds with bounded concurrency; the catalog can
+/// Each refresh uses at most 12 feeds with bounded concurrency; the catalog can
 /// still support category-specific coverage without issuing a request storm.
 const rssSources = <RssSource>[
   RssSource(

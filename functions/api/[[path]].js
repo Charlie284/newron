@@ -23,7 +23,7 @@ const allowedTopics = new Set([
   'Policy',
 ]);
 
-const allowedRssHosts = new Set([
+export const allowedRssHosts = new Set([
   'abc13.com',
   'abc7news.com',
   'api.axios.com',
@@ -106,10 +106,10 @@ export async function onRequest(context) {
     const method = context.request.method.toUpperCase();
 
     if (path === 'models' && method === 'GET') {
-      return proxyModelsRequest(context);
+      return await proxyModelsRequest(context);
     }
     if (path === 'rss' && method === 'GET') {
-      return proxyRssRequest(context.request);
+      return await proxyRssRequest(context.request);
     }
     if (['brief', 'fact-check', 'focus'].includes(path) && method === 'POST') {
       const originError = validateBrowserOrigin(context.request);
@@ -120,7 +120,7 @@ export async function onRequest(context) {
       if (rateLimitError) {
         return rateLimitError;
       }
-      return proxyAiTask(context, path);
+      return await proxyAiTask(context, path);
     }
     return jsonResponse(404, {error: 'Not found'});
   } catch (error) {
@@ -224,38 +224,176 @@ async function proxyAiTask(context, task) {
 
   const upstreamBody = buildUpstreamRequest(task, validated.value);
   const upstreamBase = normalizedUpstreamBase(context.env);
-  const response = await fetchWithTimeout(
-    `${upstreamBase}/chat/completions`,
-    {
-      method: 'POST',
-      headers: {
-        ...upstreamHeaders(context.request),
-        'Content-Type': 'application/json',
+  let response;
+  try {
+    response = await fetchWithTimeout(
+      `${upstreamBase}/chat/completions`,
+      {
+        method: 'POST',
+        headers: {
+          ...upstreamHeaders(context.request),
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(upstreamBody),
+        signal: context.request.signal,
       },
-      body: JSON.stringify(upstreamBody),
-      signal: context.request.signal,
-    },
-    AI_TIMEOUT_MS,
-  );
+      AI_TIMEOUT_MS,
+    );
+  } catch (error) {
+    if (task === 'brief' && error?.name === 'TimeoutError') {
+      return jsonResponse(200, sourceOnlyBrief(validated.value));
+    }
+    throw error;
+  }
   if (response.status === 429) {
-    return jsonResponse(429, {error: 'The AI provider is busy'}, {'Retry-After': '30'});
+    return task === 'brief'
+      ? jsonResponse(200, sourceOnlyBrief(validated.value))
+      : jsonResponse(429, {error: 'The AI provider is busy'}, {'Retry-After': '30'});
   }
   if (!response.ok) {
-    return jsonResponse(502, {error: 'The AI provider rejected the task'});
+    return task === 'brief'
+      ? jsonResponse(200, sourceOnlyBrief(validated.value))
+      : jsonResponse(502, {error: 'The AI provider rejected the task'});
   }
   const bytes = await readLimitedBody(response, MAX_AI_RESPONSE_BYTES);
+  let providerPayload;
   try {
-    JSON.parse(new TextDecoder().decode(bytes));
+    providerPayload = JSON.parse(new TextDecoder().decode(bytes));
   } catch (_) {
-    return jsonResponse(502, {error: 'The AI provider returned unreadable data'});
+    return task === 'brief'
+      ? jsonResponse(200, sourceOnlyBrief(validated.value))
+      : jsonResponse(502, {error: 'The AI provider returned unreadable data'});
   }
-  return new Response(bytes, {
-    status: 200,
-    headers: secureHeaders({
-      'Cache-Control': 'no-store',
-      'Content-Type': 'application/json; charset=utf-8',
-    }),
-  });
+  const normalized = normalizeAiProviderResult(task, providerPayload, validated.value);
+  return normalized
+    ? jsonResponse(200, normalized)
+    : task === 'brief'
+      ? jsonResponse(200, sourceOnlyBrief(validated.value))
+      : jsonResponse(502, {error: 'The AI provider returned an ungrounded answer'});
+}
+
+function sourceOnlyBrief(value) {
+  const cited = value.articles.slice(0, 3);
+  const headlines = cited
+    .map((article) => article.headline.replace(/[.!?]+$/, ''))
+    .join('; ');
+  return {
+    brief: `Leading supplied reports: ${headlines}. Open the cited originals for complete context.`,
+    citation_ids: cited.map((article) => article.id),
+    article_analyses: [],
+    generated_by: 'source_fallback',
+  };
+}
+
+function normalizeAiProviderResult(task, providerPayload, requestValue) {
+  const content = extractStructuredContent(providerPayload);
+  if (!content) {
+    return null;
+  }
+
+  if (task === 'brief') {
+    const allowedIds = new Set(requestValue.articles.map((article) => article.id));
+    const brief = outputString(content.brief, 1_800);
+    const citationIds = uniqueAllowedIds(content.citation_ids, allowedIds, 12);
+    if (brief.length < 40 || citationIds.length === 0) {
+      return null;
+    }
+    const articleAnalyses = [];
+    const seenAnalysisIds = new Set();
+    if (Array.isArray(content.article_analyses)) {
+      for (const item of content.article_analyses) {
+        const articleId = outputString(item?.article_id, 80);
+        const reason = outputString(item?.reason, 280);
+        const label = outputString(item?.label, 12);
+        if (
+          !allowedIds.has(articleId) ||
+          seenAnalysisIds.has(articleId) ||
+          !['Left', 'Center', 'Right', 'Mixed'].includes(label) ||
+          reason.length === 0
+        ) {
+          continue;
+        }
+        seenAnalysisIds.add(articleId);
+        const score = typeof item.score === 'number' && Number.isFinite(item.score)
+          ? Math.max(-1, Math.min(1, item.score))
+          : 0;
+        articleAnalyses.push({article_id: articleId, score, label, reason});
+        if (articleAnalyses.length === 4) {
+          break;
+        }
+      }
+    }
+    return {
+      brief,
+      citation_ids: citationIds,
+      article_analyses: articleAnalyses,
+      generated_by: 'ai_provider',
+    };
+  }
+
+  const allowedIds = new Set(
+    task === 'focus'
+      ? [requestValue.article.id]
+      : requestValue.articles.map((article) => article.id),
+  );
+  const summary = outputString(content.summary, 1_800);
+  const sourceIds = uniqueAllowedIds(content.source_ids, allowedIds, 12);
+  return summary.length >= 20 && sourceIds.length > 0
+    ? {summary, source_ids: sourceIds, generated_by: 'ai_provider'}
+    : null;
+}
+
+function extractStructuredContent(providerPayload) {
+  if (!providerPayload || typeof providerPayload !== 'object') {
+    return null;
+  }
+  if (typeof providerPayload.brief === 'string' || typeof providerPayload.summary === 'string') {
+    return providerPayload;
+  }
+  const rawContent = providerPayload.choices?.[0]?.message?.content;
+  let content;
+  if (typeof rawContent === 'string') {
+    content = rawContent;
+  } else if (Array.isArray(rawContent)) {
+    content = rawContent
+      .filter((part) => part?.type === 'text' && typeof part.text === 'string')
+      .map((part) => part.text)
+      .join('\n');
+  } else {
+    return null;
+  }
+  content = content
+    .trim()
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/\s*```$/, '')
+    .trim();
+  const firstBrace = content.indexOf('{');
+  const lastBrace = content.lastIndexOf('}');
+  if (firstBrace < 0 || lastBrace <= firstBrace) {
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(content.slice(firstBrace, lastBrace + 1));
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function outputString(value, maximumLength) {
+  return typeof value === 'string' ? value.trim().slice(0, maximumLength) : '';
+}
+
+function uniqueAllowedIds(value, allowedIds, maximumItems) {
+  const result = [];
+  const seen = new Set();
+  for (const id of stringArray(value, maximumItems)) {
+    if (allowedIds.has(id) && !seen.has(id)) {
+      seen.add(id);
+      result.push(id);
+    }
+  }
+  return result;
 }
 
 async function readJsonRequest(request) {
@@ -404,6 +542,7 @@ function buildUpstreamRequest(task, value) {
       'Every factual sentence must be traceable to at least one supplied article.',
       'Return keys: brief (string), citation_ids (array of article IDs), and article_analyses (array).',
       'Each article_analyses item must use article_id, score (-1 to 1), label (Left, Center, Right, or Mixed), and reason.',
+      'Include no more than four compact article_analyses items.',
       'Framing labels are interpretive; analyze language and sourcing, not publisher reputation.',
     ].join(' ');
     evidence = {topic: value.topic, sources: value.articles};
@@ -431,7 +570,8 @@ function buildUpstreamRequest(task, value) {
   return {
     model: value.model,
     temperature: 0.1,
-    max_tokens: 1_200,
+    max_tokens: 900,
+    reasoning: {effort: 'none', exclude: true},
     response_format: {type: 'json_object'},
     messages: [
       {role: 'system', content: `${commonSystem} ${taskInstruction}`},

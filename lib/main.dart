@@ -387,10 +387,13 @@ class _NewsHomePageState extends State<NewsHomePage> {
         brief: result.brief,
         briefCitationIds: result.citationIds,
         articles: analyzed,
-        usedModelInference: true,
+        usedModelInference: result.usedModelInference,
       );
       setState(() {
         _digest = next;
+        _aiError = result.usedModelInference
+            ? null
+            : 'The AI provider was unavailable. Showing a source-only fallback; retry when you want AI synthesis.';
         _isGeneratingBrief = false;
       });
       await _cache.write(next);

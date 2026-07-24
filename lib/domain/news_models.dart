@@ -218,11 +218,13 @@ class AiBriefResult {
     required this.brief,
     required this.citationIds,
     required this.articleAnalyses,
+    required this.usedModelInference,
   });
 
   final String brief;
   final List<String> citationIds;
   final Map<String, ArticleAnalysis> articleAnalyses;
+  final bool usedModelInference;
 }
 
 @immutable

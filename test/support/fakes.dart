@@ -55,6 +55,7 @@ class FakeAiAssistant implements AiAssistant {
   int createBriefCalls = 0;
   int factCheckCalls = 0;
   int exploreCalls = 0;
+  bool useModelInference = true;
 
   @override
   Future<List<AiModelOption>> loadModels() async {
@@ -86,6 +87,7 @@ class FakeAiAssistant implements AiAssistant {
               'The report attributes claims and includes qualifying language.',
         ),
       },
+      usedModelInference: useModelInference,
     );
   }
 

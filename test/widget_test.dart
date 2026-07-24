@@ -78,6 +78,30 @@ void main() {
     );
   });
 
+  testWidgets('provider failure is labeled and remains a source-only view', (
+    tester,
+  ) async {
+    assistant.useModelInference = false;
+    await pumpApp(tester);
+
+    await tester.tap(find.text('Generate AI brief'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Generate AI brief'), findsOneWidget);
+    expect(
+      find.textContaining('Showing a source-only fallback'),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining('AI synthesis from the linked articles'),
+      findsNothing,
+    );
+    final factCheck = tester.widget<TextButton>(
+      find.widgetWithText(TextButton, 'Fact check'),
+    );
+    expect(factCheck.onPressed, isNull);
+  });
+
   testWidgets('compact width keeps settings and model control usable', (
     tester,
   ) async {

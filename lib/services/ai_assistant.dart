@@ -58,8 +58,13 @@ class HttpAiAssistant implements AiAssistant {
     : _client = client ?? http.Client(),
       _ownsClient = client == null;
 
-  static const requestTimeout = Duration(seconds: 25);
+  static const requestTimeout = Duration(seconds: 32);
   static const fallbackModels = <AiModelOption>[
+    AiModelOption(
+      id: 'inclusionai/ling-3.0-flash:free',
+      label: 'Ling 3.0 Flash',
+      subtitle: 'Free model via the Newron gateway',
+    ),
     AiModelOption(
       id: 'google/gemma-4-31b-it:free',
       label: 'Gemma 4 31B',
@@ -68,11 +73,6 @@ class HttpAiAssistant implements AiAssistant {
     AiModelOption(
       id: 'nvidia/nemotron-3-super-120b-a12b:free',
       label: 'Nemotron 3 Super',
-      subtitle: 'Free model via the Newron gateway',
-    ),
-    AiModelOption(
-      id: 'minimax/minimax-m2.5:free',
-      label: 'MiniMax M2.5',
       subtitle: 'Free model via the Newron gateway',
     ),
   ];
@@ -132,7 +132,7 @@ class HttpAiAssistant implements AiAssistant {
     final payload = await _post('brief', {
       'model': model,
       'topic': topic,
-      'articles': articles.take(12).map(_articlePayload).toList(),
+      'articles': articles.take(5).map(_articlePayload).toList(),
     });
     final content = _decodeModelContent(payload);
     final brief = normalizeAiText('${content['brief'] ?? ''}', maxLength: 1800);
@@ -172,6 +172,7 @@ class HttpAiAssistant implements AiAssistant {
       brief: brief,
       citationIds: citations,
       articleAnalyses: Map.unmodifiable(analyses),
+      usedModelInference: payload['generated_by'] != 'source_fallback',
     );
   }
 
@@ -365,7 +366,7 @@ String normalizeAiText(String value, {required int maxLength}) {
 
 String _modelLabel(String id) {
   var label = id.split('/').last.replaceAll(':free', '');
-  label = label.replaceAll(RegExp(r'[-_.]+'), ' ');
+  label = label.replaceAll(RegExp(r'[-_]+'), ' ');
   return label
       .split(' ')
       .where((word) => word.isNotEmpty)

@@ -18,6 +18,25 @@ void main() {
     publishedAt: DateTime.utc(2026, 7, 23),
   );
 
+  test('keeps decimal model versions readable', () async {
+    final assistant = HttpAiAssistant(
+      client: MockClient(
+        (_) async => http.Response(
+          jsonEncode({
+            'data': [
+              {'id': 'inclusionai/ling-3.0-flash:free'},
+            ],
+          }),
+          200,
+        ),
+      ),
+    );
+
+    final models = await assistant.loadModels();
+
+    expect(models.single.label, 'Ling 3.0 Flash');
+  });
+
   test('parses only grounded brief citations and keyed analyses', () async {
     late Map<String, dynamic> requestBody;
     final assistant = HttpAiAssistant(
@@ -65,6 +84,33 @@ void main() {
     );
     expect(result.citationIds, [article.id]);
     expect(result.articleAnalyses[article.id]?.label, 'Center');
+    expect(result.usedModelInference, isTrue);
+  });
+
+  test('labels the gateway source-only fallback as non-AI', () async {
+    final assistant = HttpAiAssistant(
+      client: MockClient(
+        (_) async => http.Response(
+          jsonEncode({
+            'brief':
+                'Leading supplied reports describe a documented change and preserve the original context.',
+            'citation_ids': [article.id],
+            'article_analyses': const [],
+            'generated_by': 'source_fallback',
+          }),
+          200,
+        ),
+      ),
+    );
+
+    final result = await assistant.createBrief(
+      topic: 'Technology',
+      model: 'inclusionai/ling-3.0-flash:free',
+      articles: [article],
+    );
+
+    expect(result.usedModelInference, isFalse);
+    expect(result.citationIds, [article.id]);
   });
 
   test('rejects an AI brief that cites no displayed article', () async {
@@ -89,6 +135,41 @@ void main() {
       ),
       throwsA(isA<AiRequestException>()),
     );
+  });
+
+  test('bounds a generated brief to five source records', () async {
+    final articles = List.generate(
+      7,
+      (index) => article.copyWith(
+        id: 'article-${(index + 1).toRadixString(16).padLeft(8, '0')}',
+      ),
+    );
+    final assistant = HttpAiAssistant(
+      client: MockClient((request) async {
+        final body = jsonDecode(request.body) as Map<String, dynamic>;
+        expect(
+          body['articles'],
+          isA<List>().having((value) => value.length, 'length', 5),
+        );
+        return http.Response(
+          jsonEncode({
+            'brief':
+                'This bounded source-grounded briefing remains traceable to the displayed reporting.',
+            'citation_ids': [articles.first.id],
+            'article_analyses': const [],
+          }),
+          200,
+        );
+      }),
+    );
+
+    final result = await assistant.createBrief(
+      topic: 'Technology',
+      model: 'inclusionai/ling-3.0-flash:free',
+      articles: articles,
+    );
+
+    expect(result.citationIds, [articles.first.id]);
   });
 
   test('normalizes markdown control characters from AI text', () {

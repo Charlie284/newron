@@ -1,5 +1,7 @@
 # Universal
 node_modules/
+.wrangler/
+.impeccable/
 dist/
 build/
 out/
@@ -10,7 +12,7 @@ out/
 .vscode/
 *.log
 Thumbs.db
-# Flutterc
+# Flutter
 .dart_tool/
 .packages
 .pub/

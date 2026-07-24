@@ -21,6 +21,8 @@ interpretive.
 - Partial-failure, offline, stale-cache, loading, and empty states
 - Linked article cards with publication time and source
 - Opt-in source-grounded briefing, framing analysis, fact-check, and exploration
+- Clearly labeled source-only fallback when a briefing provider times out or
+  returns malformed/ungrounded output; fact-check stays disabled for fallbacks
 - Compact local cache without downloaded article bodies
 - Adaptive mobile/desktop layout, 48 px/dp controls, labels, focus, and dark mode
 - Cloudflare Pages gateway with schema/size/time limits, HTTPS allowlisting,
